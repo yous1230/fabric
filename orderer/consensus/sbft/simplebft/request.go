@@ -31,7 +31,7 @@ func (s *SBFT) handleRequest(req *Request, src uint64) {
 	log.Infof("replica %d: inserting %x into pending", s.id, key)
 	s.pending[key] = req
 	if s.isPrimary() && s.activeView {
-		batches, committers, valid := s.sys.Validate(s.chainId, req)
+		batches, valid := s.sys.Validate(s.chainId, req)
 		if !valid {
 			// this one is problematic, lets skip it
 			delete(s.pending, key)
@@ -42,7 +42,6 @@ func (s *SBFT) handleRequest(req *Request, src uint64) {
 			s.startBatchTimer()
 		} else {
 			s.batches = append(s.batches, batches...)
-			s.primarycommitters = append(s.primarycommitters, committers...)
 			s.maybeSendNextBatch()
 		}
 	}
@@ -57,9 +56,8 @@ func (s *SBFT) startBatchTimer() {
 }
 
 func (s *SBFT) cutAndMaybeSend() {
-	batch, committers := s.sys.Cut(s.chainId)
+	batch := s.sys.Cut(s.chainId)
 	s.batches = append(s.batches, batch)
-	s.primarycommitters = append(s.primarycommitters, committers)
 	s.maybeSendNextBatch()
 }
 
@@ -92,9 +90,8 @@ func (s *SBFT) maybeSendNextBatch() {
 		hasPending := len(s.pending) != 0
 		for k, req := range s.pending {
 			if s.validated[k] == false {
-				batches, committers, valid := s.sys.Validate(s.chainId, req)
+				batches, valid := s.sys.Validate(s.chainId, req)
 				s.batches = append(s.batches, batches...)
-				s.primarycommitters = append(s.primarycommitters, committers...)
 				if !valid {
 					log.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
 					delete(s.pending, k)
@@ -110,15 +107,12 @@ func (s *SBFT) maybeSendNextBatch() {
 			}
 			// we have pending reqs that were just sent for validation or
 			// were already sent (they are in s.validated)
-			batch, committers := s.sys.Cut(s.chainId)
+			batch := s.sys.Cut(s.chainId)
 			s.batches = append(s.batches, batch)
-			s.primarycommitters = append(s.primarycommitters, committers)
 		}
 	}
 
 	batch := s.batches[0]
 	s.batches = s.batches[1:]
-	committers := s.primarycommitters[0]
-	s.primarycommitters = s.primarycommitters[1:]
-	s.sendPreprepare(batch, committers)
+	s.sendPreprepare(batch)
 }

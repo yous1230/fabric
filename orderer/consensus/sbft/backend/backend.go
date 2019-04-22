@@ -18,36 +18,30 @@ package backend
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/ecdsa"
+	crand "crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/asn1"
+	"encoding/gob"
 	"fmt"
 	"io"
+	"math/big"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/transport"
-
-	"crypto/ecdsa"
-	crand "crypto/rand"
-	"math/big"
-
-	"crypto"
-	"crypto/rsa"
-	"crypto/sha256"
-	"encoding/asn1"
-	"encoding/gob"
-
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/orderer/common/filter"
-	commonfilter "github.com/hyperledger/fabric/orderer/common/filter"
-	"github.com/hyperledger/fabric/orderer/multichain"
-	"github.com/hyperledger/fabric/orderer/sbft/connection"
-	"github.com/hyperledger/fabric/orderer/sbft/persist"
-	s "github.com/hyperledger/fabric/orderer/sbft/simplebft"
+	"github.com/hyperledger/fabric/orderer/consensus"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
+	s "github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
 	"github.com/op/go-logging"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 const headerIndex = 0
@@ -70,7 +64,7 @@ type Backend struct {
 	// chainId to instance mapping
 	consensus   map[string]s.Receiver
 	lastBatches map[string]*s.Batch
-	supports    map[string]multichain.ConsenterSupport
+	supports    map[string]consensus.ConsenterSupport
 }
 
 type consensusConn Backend
@@ -106,7 +100,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 		conn:        conn,
 		peers:       make(map[uint64]chan<- *s.MultiChainMsg),
 		peerInfo:    make(map[string]*PeerInfo),
-		supports:    make(map[string]multichain.ConsenterSupport),
+		supports:    make(map[string]consensus.ConsenterSupport),
 		consensus:   make(map[string]s.Receiver),
 		lastBatches: make(map[string]*s.Batch),
 	}
@@ -156,13 +150,13 @@ func (b *Backend) GetMyId() uint64 {
 }
 
 // Enqueue enqueues an Envelope for a chainId for ordering, marshalling it first
-func (b *Backend) Enqueue(chainID string, env *cb.Envelope) bool {
+func (b *Backend) Enqueue(chainID string, env *cb.Envelope) error {
 	requestbytes, err := proto.Marshal(env)
 	if err != nil {
-		return false
+		return err
 	}
 	b.enqueueRequest(chainID, requestbytes)
-	return true
+	return nil
 }
 
 func (b *Backend) connectWorker(peer *PeerInfo) {
@@ -195,7 +189,10 @@ func (b *Backend) connectWorker(peer *PeerInfo) {
 
 		for {
 			msg, err := consensus.Recv()
-			if err == io.EOF || err == transport.ErrConnClosing {
+			//if err == io.EOF || err == transport.ErrConnClosing {
+			//	break
+			//}
+			if err == io.EOF {
 				break
 			}
 			if err != nil {
@@ -242,12 +239,12 @@ func (b *Backend) run() {
 }
 
 // AddSbftPeer adds a new SBFT peer for the given chainId using the given support and configuration
-func (b *Backend) AddSbftPeer(chainID string, support multichain.ConsenterSupport, config *s.Config) (*s.SBFT, error) {
+func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport, config *s.Config) (*s.SBFT, error) {
 	b.supports[chainID] = support
 	return s.New(b.GetMyId(), chainID, config, b)
 }
 
-func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, [][]filter.Committer, bool) {
+func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool) {
 	// ([][]*cb.Envelope, [][]filter.Committer, bool) {
 	// If the message is a valid normal message and fills a batch, the batch, committers, true is returned
 	// If the message is a valid special message (like a config message) it terminates the current batch
@@ -257,26 +254,26 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, [][]
 	if err != nil {
 		logger.Panicf("Request format error: %s", err)
 	}
-	envbatch, committers, accepted := b.supports[chainID].BlockCutter().Ordered(env)
+	envbatch, accepted := b.supports[chainID].BlockCutter().Ordered(env)
 	if accepted {
 		if len(envbatch) == 1 {
 			rb1 := toRequestBatch(envbatch[0])
-			return [][]*s.Request{rb1}, committers, true
+			return [][]*s.Request{rb1}, true
 		}
 		if len(envbatch) == 2 {
 			rb1 := toRequestBatch(envbatch[0])
 			rb2 := toRequestBatch(envbatch[1])
-			return [][]*s.Request{rb1, rb2}, committers, true
+			return [][]*s.Request{rb1, rb2}, true
 		}
 
-		return nil, nil, true
+		return nil, true
 	}
-	return nil, nil, false
+	return nil, false
 }
 
-func (b *Backend) Cut(chainID string) ([]*s.Request, []filter.Committer) {
-	envbatch, committers := b.supports[chainID].BlockCutter().Cut()
-	return toRequestBatch(envbatch), committers
+func (b *Backend) Cut(chainID string) ([]*s.Request) {
+	envbatch := b.supports[chainID].BlockCutter().Cut()
+	return toRequestBatch(envbatch)
 }
 
 func toRequestBatch(envelopes []*cb.Envelope) []*s.Request {
@@ -379,7 +376,7 @@ func (b *Backend) Timer(d time.Duration, tf func()) s.Canceller {
 }
 
 // Deliver writes a block
-func (b *Backend) Deliver(chainId string, batch *s.Batch, committers []commonfilter.Committer) {
+func (b *Backend) Deliver(chainId string, batch *s.Batch) {
 	blockContents := make([]*cb.Envelope, 0, len(batch.Payloads))
 	for _, p := range batch.Payloads {
 		envelope := &cb.Envelope{}
@@ -400,7 +397,7 @@ func (b *Backend) Deliver(chainId string, batch *s.Batch, committers []commonfil
 	metadata[signaturesIndex] = encodeSignatures(batch.Signatures)
 	block.Metadata.Metadata = metadata
 	b.lastBatches[chainId] = batch
-	b.supports[chainId].WriteBlock(block, committers, nil)
+	b.supports[chainId].WriteBlock(block, nil)
 }
 
 // Persist persists data identified by a chainId and a key
@@ -425,7 +422,7 @@ func (b *Backend) Restore(chainId string, key string, out proto.Message) bool {
 		return false
 	}
 	err = proto.Unmarshal(val, out)
-	return (err == nil)
+	return err == nil
 }
 
 // LastBatch returns the last batch for a given chain identified by its ID

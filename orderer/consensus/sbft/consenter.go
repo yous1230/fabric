@@ -70,8 +70,10 @@ func newChain(sbft *consenter, support consensus.ConsenterSupport) *chain {
 	sbft.sbftPeers[support.ChainID()] = initSbftPeer(support.ChainID(), sbft, support)
 
 	return &chain{
-		chainID:        support.ChainID(),
-		consensusStack: sbft.consensusStack,
+		chainID:         support.ChainID(),
+		exitChan:        make(chan struct{}),
+		consensusStack:  sbft.consensusStack,
+		migrationStatus: migration.NewStatusStepper(support.IsSystemChannel(), support.ChainID()), // Needed by consensus-type migration
 	}
 }
 
@@ -114,13 +116,19 @@ func (ch *chain) Start() {
 
 // Halt frees the resources which were allocated for this Chain
 func (ch *chain) Halt() {
-	panic("There is no way to halt SBFT")
+	// panic("There is no way to halt SBFT")
+	select {
+	case <-ch.exitChan:
+		// Allow multiple halts without panic
+	default:
+		close(ch.exitChan)
+	}
 }
 
 // Enqueue accepts a message and returns true on acceptance, or false on shutdown
-func (ch *chain) Enqueue(env *cb.Envelope) bool {
-	return ch.consensusStack.backend.Enqueue(ch.chainID, env)
-}
+//func (ch *chain) Enqueue(env *cb.Envelope) bool {
+//	return ch.consensusStack.backend.Enqueue(ch.chainID, env)
+//}
 
 func (ch *chain) WaitReady() error {
 	return nil
@@ -128,7 +136,7 @@ func (ch *chain) WaitReady() error {
 
 // Order accepts normal messages for ordering
 func (ch *chain) Order(env *cb.Envelope, configSeq uint64) error {
-	return nil
+	return ch.consensusStack.backend.Enqueue(ch.chainID, env)
 }
 
 // Configure accepts configuration update messages for ordering

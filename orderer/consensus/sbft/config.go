@@ -22,8 +22,8 @@ import (
 	"io/ioutil"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/orderer/sbft/crypto"
-	"github.com/hyperledger/fabric/orderer/sbft/persist"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 )
 
 func ReadJsonConfig(file string) (*ConsensusConfig, error) {

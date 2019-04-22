@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package backend;
 
-option go_package = "github.com/hyperledger/fabric/orderer/sbft/backend";
+option go_package = "github.com/hyperledger/fabric/orderer/consensus/sbft/backend";
 
 import "simplebft/simplebft.proto";
 

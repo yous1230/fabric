@@ -26,7 +26,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/transport"
 )
 
 type PeerInfo struct {
@@ -115,16 +114,14 @@ func DialPeer(peer PeerInfo, opts ...grpc.DialOption) (*grpc.ClientConn, error) 
 	return dialPeer(nil, peer, opts...)
 }
 
-func GetPeerInfo(s grpc.Stream) PeerInfo {
+func GetPeerInfo(s grpc.ServerStream) PeerInfo {
 	var pi PeerInfo
 
 	ctx := s.Context()
-	trs, ok := transport.StreamFromContext(ctx)
+	p, ok := peer.FromContext(ctx)
 	if ok {
-		pi.addr = trs.ServerTransport().RemoteAddr().String()
+		pi.addr = p.Addr.String()
 	}
-
-	p, _ := peer.FromContext(ctx)
 	switch creds := p.AuthInfo.(type) {
 	case credentials.TLSInfo:
 		state := creds.State

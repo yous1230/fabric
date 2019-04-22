@@ -75,12 +75,12 @@ func (s *SBFT) handleHello(h *Hello, src uint64) {
 
 	if s.sys.LastBatch(s.chainId).DecodeHeader().Seq < bh.Seq {
 		log.Debugf("replica %d: delivering batches %d after hello from replica %d", s.id, bh.Seq, src)
-		blockOK, committers := s.getCommittersFromBatch(h.Batch)
-		if blockOK {
-			s.deliverBatch(h.Batch, committers)
-		} else {
-			log.Debugf("replica %d: we got a hello from %d with an erroneous block", s.id, src)
-		}
+		//blockOK, committers := s.getCommittersFromBatch(h.Batch)
+		//if blockOK {
+		s.deliverBatch(h.Batch)
+		//} else {
+		//	log.Debugf("replica %d: we got a hello from %d with an erroneous block", s.id, src)
+		//}
 	}
 
 	s.handleNewView(h.NewView, src)

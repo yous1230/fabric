@@ -19,11 +19,9 @@ package simplebft
 import (
 	"bytes"
 	"time"
-
-	"github.com/hyperledger/fabric/orderer/common/filter"
 )
 
-func (s *SBFT) sendPreprepare(batch []*Request, committers []filter.Committer) {
+func (s *SBFT) sendPreprepare(batch []*Request) {
 	seq := s.nextSeq()
 
 	data := make([][]byte, len(batch))
@@ -41,7 +39,7 @@ func (s *SBFT) sendPreprepare(batch []*Request, committers []filter.Committer) {
 	s.sys.Persist(s.chainId, preprepared, m)
 	s.broadcast(&Msg{&Msg_Preprepare{m}})
 	log.Infof("replica %d: sendPreprepare", s.id)
-	s.handleCheckedPreprepare(m, committers)
+	s.handleCheckedPreprepare(m)
 }
 
 func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
@@ -79,17 +77,17 @@ func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
 		return
 	}
 
-	blockOK, committers := s.getCommittersFromBatch(pp.Batch)
-	if !blockOK {
-		log.Debugf("Replica %d found Byzantine block in preprepare, Seq: %d View: %d", s.id, pp.Seq.Seq, pp.Seq.View)
-		s.sendViewChange()
-		return
-	}
+	//blockOK, committers := s.getCommittersFromBatch(pp.Batch)
+	//if !blockOK {
+	//	log.Debugf("Replica %d found Byzantine block in preprepare, Seq: %d View: %d", s.id, pp.Seq.Seq, pp.Seq.View)
+	//	s.sendViewChange()
+	//	return
+	//}
 	log.Infof("replica %d: handlePrepare", s.id)
-	s.handleCheckedPreprepare(pp, committers)
+	s.handleCheckedPreprepare(pp)
 }
 
-func (s *SBFT) acceptPreprepare(pp *Preprepare, committers []filter.Committer) {
+func (s *SBFT) acceptPreprepare(pp *Preprepare) {
 	sub := Subject{Seq: pp.Seq, Digest: pp.Batch.Hash()}
 
 	log.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
@@ -102,12 +100,11 @@ func (s *SBFT) acceptPreprepare(pp *Preprepare, committers []filter.Committer) {
 		prep:       make(map[uint64]*Subject),
 		commit:     make(map[uint64]*Subject),
 		checkpoint: make(map[uint64]*Checkpoint),
-		committers: committers,
 	}
 }
 
-func (s *SBFT) handleCheckedPreprepare(pp *Preprepare, committers []filter.Committer) {
-	s.acceptPreprepare(pp, committers)
+func (s *SBFT) handleCheckedPreprepare(pp *Preprepare) {
+	s.acceptPreprepare(pp)
 	if !s.isPrimary() {
 		s.sendPrepare()
 		s.processBacklog()

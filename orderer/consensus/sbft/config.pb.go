@@ -18,7 +18,7 @@ package sbft
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import simplebft "github.com/hyperledger/fabric/orderer/sbft/simplebft"
+import simplebft "github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

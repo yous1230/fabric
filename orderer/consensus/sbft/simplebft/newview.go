@@ -159,12 +159,12 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 			}
 		}
 		// TODO we should not do this here, as prevBatch was already delivered
-		blockOK, committers := s.getCommittersFromBatch(prevBatch)
-		if !blockOK {
-			log.Panic("Replica %d: our last checkpointed batch is erroneous (block cutter).", s.id)
-		}
+		//blockOK, committers := s.getCommittersFromBatch(prevBatch)
+		//if !blockOK {
+		//	log.Panic("Replica %d: our last checkpointed batch is erroneous (block cutter).", s.id)
+		//}
 		// TODO what should we do with the remaining?
-		s.deliverBatch(prevBatch, committers)
+		s.deliverBatch(prevBatch)
 	}
 
 	// after a new-view message, prepare to accept new requests.
@@ -180,13 +180,13 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 			Seq:   &SeqView{Seq: nv.Batch.DecodeHeader().Seq, View: s.view},
 			Batch: nv.Batch,
 		}
-		blockOK, committers := s.getCommittersFromBatch(nv.Batch)
-		if !blockOK {
-			log.Debugf("Replica %d: new view %d batch erroneous (block cutter).", s.id, nv.View)
-			s.sendViewChange()
-		}
+		//blockOK, committers := s.getCommittersFromBatch(nv.Batch)
+		//if !blockOK {
+		//	log.Debugf("Replica %d: new view %d batch erroneous (block cutter).", s.id, nv.View)
+		//	s.sendViewChange()
+		//}
 
-		s.handleCheckedPreprepare(pp, committers)
+		s.handleCheckedPreprepare(pp)
 	} else {
 		s.cancelViewChangeTimer()
 		s.maybeSendNextBatch()
