@@ -249,6 +249,7 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 	// If the message is a valid normal message and fills a batch, the batch, committers, true is returned
 	// If the message is a valid special message (like a config message) it terminates the current batch
 	// and returns the current batch and committers (if it is not empty), plus a second batch containing the special transaction and commiter, and true
+	logger.Debugf("Validate request %v for chain %s", req, chainID)
 	env := &cb.Envelope{}
 	err := proto.Unmarshal(req.Payload, env)
 	if err != nil {

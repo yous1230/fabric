@@ -38,59 +38,59 @@ func (s *SBFT) sendPreprepare(batch []*Request) {
 
 	s.sys.Persist(s.chainId, preprepared, m)
 	s.broadcast(&Msg{&Msg_Preprepare{m}})
-	log.Infof("replica %d: sendPreprepare", s.id)
+	logger.Infof("replica %d: sendPreprepare", s.id)
 	s.handleCheckedPreprepare(m)
 }
 
 func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
 	if src == s.id {
-		log.Infof("replica %d: ignoring preprepare from self: %d", s.id, src)
+		logger.Infof("replica %d: ignoring preprepare from self: %d", s.id, src)
 		return
 	}
 	if src != s.primaryID() {
-		log.Infof("replica %d: preprepare from non-primary %d", s.id, src)
+		logger.Infof("replica %d: preprepare from non-primary %d", s.id, src)
 		return
 	}
 	nextSeq := s.nextSeq()
 	if *pp.Seq != nextSeq {
-		log.Infof("replica %d: preprepare does not match expected %v, got %v", s.id, nextSeq, *pp.Seq)
+		logger.Infof("replica %d: preprepare does not match expected %v, got %v", s.id, nextSeq, *pp.Seq)
 		return
 	}
 	if s.cur.subject.Seq.Seq == pp.Seq.Seq {
-		log.Infof("replica %d: duplicate preprepare for %v", s.id, *pp.Seq)
+		logger.Infof("replica %d: duplicate preprepare for %v", s.id, *pp.Seq)
 		return
 	}
 	if pp.Batch == nil {
-		log.Infof("replica %d: preprepare without batches", s.id)
+		logger.Infof("replica %d: preprepare without batches", s.id)
 		return
 	}
 
 	batchheader, err := s.checkBatch(pp.Batch, true, false)
 	if err != nil || batchheader.Seq != pp.Seq.Seq {
-		log.Infof("replica %d: preprepare %v batches head inconsistent from %d: %s", s.id, pp.Seq, src, err)
+		logger.Infof("replica %d: preprepare %v batches head inconsistent from %d: %s", s.id, pp.Seq, src, err)
 		return
 	}
 
 	prevhash := s.sys.LastBatch(s.chainId).Hash()
 	if !bytes.Equal(batchheader.PrevHash, prevhash) {
-		log.Infof("replica %d: preprepare batches prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
+		logger.Infof("replica %d: preprepare batches prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
 		return
 	}
 
 	//blockOK, committers := s.getCommittersFromBatch(pp.Batch)
 	//if !blockOK {
-	//	log.Debugf("Replica %d found Byzantine block in preprepare, Seq: %d View: %d", s.id, pp.Seq.Seq, pp.Seq.View)
+	//	logger.Debugf("Replica %d found Byzantine block in preprepare, Seq: %d View: %d", s.id, pp.Seq.Seq, pp.Seq.View)
 	//	s.sendViewChange()
 	//	return
 	//}
-	log.Infof("replica %d: handlePrepare", s.id)
+	logger.Infof("replica %d: handlePrepare", s.id)
 	s.handleCheckedPreprepare(pp)
 }
 
 func (s *SBFT) acceptPreprepare(pp *Preprepare) {
 	sub := Subject{Seq: pp.Seq, Digest: pp.Batch.Hash()}
 
-	log.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
+	logger.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
 	s.sys.Persist(s.chainId, preprepared, pp)
 
 	s.cur = reqInfo{
@@ -116,6 +116,6 @@ func (s *SBFT) handleCheckedPreprepare(pp *Preprepare) {
 ////////////////////////////////////////////////
 
 func (s *SBFT) requestTimeout() {
-	log.Infof("replica %d: request timed out: %s", s.id, s.cur.subject.Seq)
+	logger.Infof("replica %d: request timed out: %s", s.id, s.cur.subject.Seq)
 	s.sendViewChange()
 }

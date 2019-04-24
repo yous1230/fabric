@@ -229,7 +229,7 @@ func (s *SBFT) broadcast(m *Msg) {
 
 // Receive is the ingress method for SBFT messages.
 func (s *SBFT) Receive(m *Msg, src uint64) {
-	log.Debugf("replica %d: received message from %d: %s", s.id, src, m)
+	logger.Debugf("replica %d: received message from %d: %s", s.id, src, m)
 
 	if h := m.GetHello(); h != nil {
 		s.handleHello(h, src)
@@ -246,7 +246,7 @@ func (s *SBFT) Receive(m *Msg, src uint64) {
 	}
 
 	if s.testBacklogMessage(m, src) {
-		log.Debugf("replica %d: message for future seq, storing for later", s.id)
+		logger.Debugf("replica %d: message for future seq, storing for later", s.id)
 		s.recordBacklogMsg(m, src)
 		return
 	}
@@ -269,12 +269,12 @@ func (s *SBFT) handleQueueableMessage(m *Msg, src uint64) {
 		return
 	}
 
-	log.Warningf("replica %d: received invalid message from %d", s.id, src)
+	logger.Warningf("replica %d: received invalid message from %d", s.id, src)
 }
 
 func (s *SBFT) deliverBatch(batch *Batch) {
 	//if committers == nil {
-	//	log.Warningf("replica %d: commiter is nil", s.id)
+	//	logger.Warningf("replica %d: commiter is nil", s.id)
 	//	panic("Committer is nil.")
 	//}
 	s.cur.checkpointDone = true
@@ -285,7 +285,7 @@ func (s *SBFT) deliverBatch(batch *Batch) {
 
 	for _, req := range batch.Payloads {
 		key := hash2str(hash(req))
-		log.Infof("replica %d: attempting to remove %x from pending", s.id, key)
+		logger.Infof("replica %d: attempting to remove %x from pending", s.id, key)
 		delete(s.pending, key)
 		delete(s.validated, key)
 	}

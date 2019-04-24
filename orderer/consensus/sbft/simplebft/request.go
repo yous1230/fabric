@@ -22,17 +22,18 @@ import (
 
 // Request proposes a new request to the BFT network.
 func (s *SBFT) Request(req []byte) {
-	log.Debugf("replica %d: broadcasting a request", s.id)
+	logger.Debugf("Replica %d: broadcasting a request", s.id)
 	s.broadcast(&Msg{&Msg_Request{&Request{req}}})
 }
 
 func (s *SBFT) handleRequest(req *Request, src uint64) {
 	key := hash2str(hash(req.Payload))
-	log.Infof("replica %d: inserting %x into pending", s.id, key)
+	logger.Infof("Replica %d: inserting %x into pending", s.id, key)
 	s.pending[key] = req
 	if s.isPrimary() && s.activeView {
 		batches, valid := s.sys.Validate(s.chainId, req)
 		if !valid {
+			logger.Errorf("Validate request invalid")
 			// this one is problematic, lets skip it
 			delete(s.pending, key)
 			return
@@ -93,7 +94,7 @@ func (s *SBFT) maybeSendNextBatch() {
 				batches, valid := s.sys.Validate(s.chainId, req)
 				s.batches = append(s.batches, batches...)
 				if !valid {
-					log.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
+					logger.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
 					delete(s.pending, k)
 					continue
 				}
@@ -114,5 +115,6 @@ func (s *SBFT) maybeSendNextBatch() {
 
 	batch := s.batches[0]
 	s.batches = s.batches[1:]
+	logger.Infof( "Send Preprepare batch %v ", batch)
 	s.sendPreprepare(batch)
 }

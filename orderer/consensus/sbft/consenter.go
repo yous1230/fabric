@@ -32,7 +32,7 @@ type consensusStack struct {
 	backend *backend.Backend
 }
 
-var logger = logging.MustGetLogger("orderer/sbft")
+var logger = logging.MustGetLogger("orderer/consensus/sbft")
 
 // Consenter interface implementation for new main application
 type consenter struct {
@@ -90,6 +90,9 @@ func createConsensusStack(sbft *consenter) *consensusStack {
 		logger.Errorf("Backend instantiation error.")
 		panic(err)
 	}
+
+	go conn.Server.Serve(conn.Listener)
+
 	return &consensusStack{
 		backend: backend,
 		persist: persist,

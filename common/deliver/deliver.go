@@ -159,7 +159,7 @@ func (h *Handler) Handle(ctx context.Context, srv *Server) error {
 			logger.Warningf("Error reading from %s: %s", addr, err)
 			return err
 		}
-
+		logger.Debugf("Read seek info message from %s, envelope: %v", addr, envelope)
 		status, err := h.deliverBlocks(ctx, srv, envelope)
 		if err != nil {
 			return err
@@ -167,6 +167,7 @@ func (h *Handler) Handle(ctx context.Context, srv *Server) error {
 
 		err = srv.SendStatusResponse(status)
 		if status != cb.Status_SUCCESS {
+			logger.Warningf("Error sending to %s: %s, status: %s", addr, err, status)
 			return err
 		}
 		if err != nil {

@@ -47,17 +47,17 @@ func (s *SBFT) handleCheckpoint(c *Checkpoint, src uint64) {
 
 	err := s.checkBytesSig(c.Digest, src, c.Signature)
 	if err != nil {
-		log.Infof("replica %d: checkpoint signature invalid for %d from %d", s.id, c.Seq, src)
+		logger.Infof("replica %d: checkpoint signature invalid for %d from %d", s.id, c.Seq, src)
 		return
 	}
 
 	// TODO should we always accept checkpoints?
 	if c.Seq != s.cur.subject.Seq.Seq {
-		log.Infof("replica %d: checkpoint does not match expected subject %v, got %v", s.id, &s.cur.subject, c)
+		logger.Infof("replica %d: checkpoint does not match expected subject %v, got %v", s.id, &s.cur.subject, c)
 		return
 	}
 	if _, ok := s.cur.checkpoint[src]; ok {
-		log.Infof("replica %d: duplicate checkpoint for %d from %d", s.id, c.Seq, src)
+		logger.Infof("replica %d: duplicate checkpoint for %d from %d", s.id, c.Seq, src)
 	}
 	s.cur.checkpoint[src] = c
 
@@ -88,7 +88,7 @@ func (s *SBFT) handleCheckpoint(c *Checkpoint, src uint64) {
 	c = s.cur.checkpoint[replicas[0]]
 
 	if !reflect.DeepEqual(c.Digest, s.cur.subject.Digest) {
-		log.Warningf("replica %d: weak checkpoint %x does not match our state %x --- primary %d of view %d is probably Byzantine, sending view change",
+		logger.Warningf("replica %d: weak checkpoint %x does not match our state %x --- primary %d of view %d is probably Byzantine, sending view change",
 			s.id, c.Digest, s.cur.subject.Digest, s.primaryID(), s.view)
 		s.sendViewChange()
 		return
@@ -98,7 +98,7 @@ func (s *SBFT) handleCheckpoint(c *Checkpoint, src uint64) {
 	batch := *s.cur.preprep.Batch
 	batch.Signatures = cpset
 	s.deliverBatch(&batch)
-	log.Infof("replica %d: request %s %s delivered on %d (completed common case)", s.id, s.cur.subject.Seq, hash2str(s.cur.subject.Digest), s.id)
+	logger.Infof("replica %d: request %s %s delivered on %d (completed common case)", s.id, s.cur.subject.Seq, hash2str(s.cur.subject.Digest), s.id)
 	s.maybeSendNextBatch()
 	s.processBacklog()
 }

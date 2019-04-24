@@ -28,7 +28,7 @@ func (s *SBFT) sendViewChange() {
 			state.viewchange = nil
 		}
 	}
-	log.Noticef("replica %d: sending viewchange for view %d", s.id, s.view)
+	logger.Noticef("replica %d: sending viewchange for view %d", s.id, s.view)
 
 	var q, p []*Subject
 	if s.cur.prepared {
@@ -68,19 +68,19 @@ func (s *SBFT) handleViewChange(svc *Signed, src uint64) {
 		_, err = s.checkBatch(vc.Checkpoint, false, true)
 	}
 	if err != nil {
-		log.Noticef("replica %d: invalid viewchange: %s", s.id, err)
+		logger.Noticef("replica %d: invalid viewchange: %s", s.id, err)
 		return
 	}
 	if vc.View < s.view {
-		log.Debugf("replica %d: old view change from %d for view %d, we are in view %d", s.id, src, vc.View, s.view)
+		logger.Debugf("replica %d: old view change from %d for view %d, we are in view %d", s.id, src, vc.View, s.view)
 		return
 	}
 	if ovc := s.replicaState[src].viewchange; ovc != nil && vc.View <= ovc.View {
-		log.Noticef("replica %d: duplicate view change for %d from %d", s.id, vc.View, src)
+		logger.Noticef("replica %d: duplicate view change for %d from %d", s.id, vc.View, src)
 		return
 	}
 
-	log.Infof("replica %d: viewchange from %d: %v", s.id, src, vc)
+	logger.Infof("replica %d: viewchange from %d: %v", s.id, src, vc)
 	s.replicaState[src].viewchange = vc
 	s.replicaState[src].signedViewchange = svc
 
@@ -105,7 +105,7 @@ func (s *SBFT) handleViewChange(svc *Signed, src uint64) {
 	if quorum == s.oneCorrectQuorum() {
 		// catch up to the minimum view
 		if s.view < min {
-			log.Noticef("replica %d: we are behind on view change, resending for newer view", s.id)
+			logger.Noticef("replica %d: we are behind on view change, resending for newer view", s.id)
 			s.view = min - 1
 			s.sendViewChange()
 			return
@@ -113,10 +113,10 @@ func (s *SBFT) handleViewChange(svc *Signed, src uint64) {
 	}
 
 	if quorum == s.viewChangeQuorum() {
-		log.Noticef("replica %d: received view change quorum, starting view change timer", s.id)
+		logger.Noticef("replica %d: received view change quorum, starting view change timer", s.id)
 		s.viewChangeTimer = s.sys.Timer(s.viewChangeTimeout, func() {
 			s.viewChangeTimeout *= 2
-			log.Noticef("replica %d: view change timed out, sending next", s.id)
+			logger.Noticef("replica %d: view change timed out, sending next", s.id)
 			s.sendViewChange()
 		})
 	}

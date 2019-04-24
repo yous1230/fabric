@@ -40,12 +40,12 @@ func (s *SBFT) handleCommit(c *Subject, src uint64) {
 	}
 
 	if !reflect.DeepEqual(c, &s.cur.subject) {
-		log.Warningf("replica %d: commit does not match expected subject %v %x, got %v %x",
+		logger.Warningf("replica %d: commit does not match expected subject %v %x, got %v %x",
 			s.id, s.cur.subject.Seq, s.cur.subject.Digest, c.Seq, c.Digest)
 		return
 	}
 	if _, ok := s.cur.commit[src]; ok {
-		log.Infof("replica %d: duplicate commit for %v from %d", s.id, *c.Seq, src)
+		logger.Infof("replica %d: duplicate commit for %v from %d", s.id, *c.Seq, src)
 		return
 	}
 	s.cur.commit[src] = c
@@ -56,7 +56,7 @@ func (s *SBFT) handleCommit(c *Subject, src uint64) {
 		return
 	}
 	s.cur.committed = true
-	log.Noticef("replica %d: executing %v %x", s.id, s.cur.subject.Seq, s.cur.subject.Digest)
+	logger.Noticef("replica %d: executing %v %x", s.id, s.cur.subject.Seq, s.cur.subject.Digest)
 
 	s.sys.Persist(s.chainId, committed, &s.cur.subject)
 

@@ -16,10 +16,16 @@ limitations under the License.
 
 package simplebft
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hyperledger/fabric/common/flogging"
+)
 
 const maxBacklogSeq = 4
 const msgPerSeq = 3 // (pre)prepare, commit, checkpoint
+
+var logger = flogging.MustGetLogger("orderer.consensus.sbft.simplebft")
 
 func (s *SBFT) testBacklogMessage(m *Msg, src uint64) bool {
 	test := func(seq *SeqView) bool {
@@ -52,7 +58,7 @@ func (s *SBFT) recordBacklogMsg(m *Msg, src uint64) {
 	s.replicaState[src].backLog = append(s.replicaState[src].backLog, m)
 
 	if len(s.replicaState[src].backLog) > maxBacklogSeq*msgPerSeq {
-		log.Debugf("replica %d: backlog for %d full, discarding and reconnecting", s.id, src)
+		logger.Debugf("replica %d: backlog for %d full, discarding and reconnecting", s.id, src)
 		s.discardBacklog(src)
 		s.sys.Reconnect(s.chainId, src)
 	}
@@ -78,7 +84,7 @@ func (s *SBFT) processBacklog() {
 				}
 				state.backLog = rest
 
-				log.Debugf("replica %d: processing stored message from %d: %s", s.id, src, m)
+				logger.Debugf("replica %d: processing stored message from %d: %s", s.id, src, m)
 
 				s.handleQueueableMessage(m, src)
 				processed = true

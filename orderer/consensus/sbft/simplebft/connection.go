@@ -66,20 +66,20 @@ func (s *SBFT) Connection(replica uint64) {
 
 func (s *SBFT) handleHello(h *Hello, src uint64) {
 	bh, err := s.checkBatch(h.Batch, false, true)
-	log.Debugf("replica %d: got hello for batches %d from replica %d", s.id, bh.Seq, src)
+	logger.Debugf("replica %d: got hello for batches %d from replica %d", s.id, bh.Seq, src)
 
 	if err != nil {
-		log.Warningf("replica %d: invalid hello batches from %d: %s", s.id, src, err)
+		logger.Warningf("replica %d: invalid hello batches from %d: %s", s.id, src, err)
 		return
 	}
 
 	if s.sys.LastBatch(s.chainId).DecodeHeader().Seq < bh.Seq {
-		log.Debugf("replica %d: delivering batches %d after hello from replica %d", s.id, bh.Seq, src)
+		logger.Debugf("replica %d: delivering batches %d after hello from replica %d", s.id, bh.Seq, src)
 		//blockOK, committers := s.getCommittersFromBatch(h.Batch)
 		//if blockOK {
 		s.deliverBatch(h.Batch)
 		//} else {
-		//	log.Debugf("replica %d: we got a hello from %d with an erroneous block", s.id, src)
+		//	logger.Debugf("replica %d: we got a hello from %d with an erroneous block", s.id, src)
 		//}
 	}
 
