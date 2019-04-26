@@ -144,7 +144,7 @@ func (ch *chain) Order(env *cb.Envelope, configSeq uint64) error {
 
 // Configure accepts configuration update messages for ordering
 func (ch *chain) Configure(config *cb.Envelope, configSeq uint64) error {
-	return nil
+	return ch.consensusStack.backend.Enqueue(ch.chainID, config)
 }
 
 // Errored only closes on exit

@@ -50,7 +50,7 @@ const headerIndex = 0
 const signaturesIndex = 1
 const metadataLen = 2
 
-var logger = logging.MustGetLogger("backend")
+var logger = logging.MustGetLogger("orderer.consensus.sbft.backend")
 
 type Backend struct {
 	conn        *connection.Manager
@@ -267,7 +267,8 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 	}
 	blocks := b.propose(chainID, batches...)
 
-	if pending {
+	logger.Info("Envelope order pending: %b", pending)
+	if !pending {
 		if len(blocks) == 1 {
 			rb1 := toRequestBlock(blocks[0])
 			return [][]*s.Request{rb1}, true
@@ -460,16 +461,20 @@ func (b *Backend) Deliver(chainId string, batch *s.Batch) {
 	//block := b.supports[chainId].CreateNextBlock(blockContents)
 
 	block := utils.UnmarshalBlockOrPanic(batch.Payloads[0])
-
+	b.lastBatches[chainId] = batch
 	// TODO SBFT needs to use Rawledger's structures and signatures over the Block.
 	// This a quick and dirty solution to make it work.
-	block.Metadata = &cb.BlockMetadata{}
+	blockMetadata := &cb.BlockMetadata{}
 	metadata := make([][]byte, metadataLen)
 	metadata[headerIndex] = batch.Header
 	metadata[signaturesIndex] = encodeSignatures(batch.Signatures)
-	block.Metadata.Metadata = metadata
-	b.lastBatches[chainId] = batch
-	b.supports[chainId].WriteBlock(block, nil)
+	blockMetadata.Metadata = metadata
+	m := utils.MarshalOrPanic(blockMetadata)
+	if utils.IsConfigBlock(block) {
+		b.supports[chainId].WriteConfigBlock(block, m)
+	} else {
+		b.supports[chainId].WriteBlock(block, m)
+	}
 }
 
 // Persist persists data identified by a chainId and a key

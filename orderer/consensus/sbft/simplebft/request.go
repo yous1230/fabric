@@ -74,6 +74,7 @@ func (s *SBFT) batchSize() uint64 {
 }
 
 func (s *SBFT) maybeSendNextBatch() {
+	logger.Info("Enter maybeSendNextBatch")
 	if s.batchTimer != nil {
 		s.batchTimer.Cancel()
 		s.batchTimer = nil
@@ -115,6 +116,6 @@ func (s *SBFT) maybeSendNextBatch() {
 
 	block := s.blocks[0]
 	s.blocks = s.blocks[1:]
-	logger.Infof("Send Preprepare block %v ", block)
+	logger.Infof("Send Preprepare for chainId: %s", s.chainId)
 	s.sendPreprepare(block)
 }
