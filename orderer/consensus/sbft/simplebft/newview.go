@@ -45,7 +45,7 @@ func (s *SBFT) maybeSendNewView() {
 
 	var batch *Batch
 	if xset == nil {
-		// no need for batches, it is contained in the vset
+		// no need for blocks, it is contained in the vset
 	} else if reflect.DeepEqual(s.cur.subject.Digest, xset.Digest) {
 		batch = s.cur.preprep.Batch
 	} else {
@@ -122,12 +122,12 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 
 	if nv.Xset == nil {
 		if nv.Batch != nil {
-			logger.Warningf("replica %d: invalid new view from %d: null request should come with null batches", s.id, src)
+			logger.Warningf("replica %d: invalid new view from %d: null request should come with null blocks", s.id, src)
 			s.sendViewChange()
 			return
 		}
 	} else if nv.Batch == nil || !bytes.Equal(nv.Batch.Hash(), nv.Xset.Digest) {
-		logger.Warningf("replica %d: invalid new view from %d: batches head hash does not match xset: %x, %x, %v",
+		logger.Warningf("replica %d: invalid new view from %d: blocks head hash does not match xset: %x, %x, %v",
 			s.id, src, hash(nv.Batch.Header), nv.Xset.Digest, nv)
 		s.sendViewChange()
 		return
@@ -136,7 +136,7 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 	if nv.Batch != nil {
 		_, err = s.checkBatch(nv.Batch, true, false)
 		if err != nil {
-			logger.Warningf("replica %d: invalid new view from %d: invalid batches, %s",
+			logger.Warningf("replica %d: invalid new view from %d: invalid blocks, %s",
 				s.id, src, err)
 			s.sendViewChange()
 			return
@@ -146,15 +146,15 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 	s.view = nv.View
 	s.discardBacklog(s.primaryID())
 
-	// maybe deliver previous batches
+	// maybe deliver previous blocks
 	if s.sys.LastBatch(s.chainId).DecodeHeader().Seq < prevBatch.DecodeHeader().Seq {
 		if prevBatch.DecodeHeader().Seq == s.cur.subject.Seq.Seq {
 			// we just received a signature set for a request which we preprepared, but never delivered.
 			// check first if the locally preprepared request matches the signature set
 			if !reflect.DeepEqual(prevBatch.DecodeHeader().DataHash, s.cur.preprep.Batch.DecodeHeader().DataHash) {
-				logger.Warningf("replica %d: [seq %d] request checkpointed in a previous view does not match locally preprepared one, delivering batches without payload", s.id, s.cur.subject.Seq.Seq)
+				logger.Warningf("replica %d: [seq %d] request checkpointed in a previous view does not match locally preprepared one, delivering blocks without payload", s.id, s.cur.subject.Seq.Seq)
 			} else {
-				logger.Debugf("replica %d: [seq %d] request checkpointed in a previous view with matching preprepare, completing and delivering the batches with payload", s.id, s.cur.subject.Seq.Seq)
+				logger.Debugf("replica %d: [seq %d] request checkpointed in a previous view with matching preprepare, completing and delivering the blocks with payload", s.id, s.cur.subject.Seq.Seq)
 				prevBatch.Payloads = s.cur.preprep.Batch.Payloads
 			}
 		}

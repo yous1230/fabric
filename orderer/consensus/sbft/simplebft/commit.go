@@ -30,7 +30,7 @@ func (s *SBFT) sendCommit() {
 	s.cur.prepared = true
 	c := s.cur.subject
 	s.sys.Persist(s.chainId, prepared, &c)
-	s.broadcast(&Msg{&Msg_Commit{&c}})
+	s.broadcast(&Msg{Type: &Msg_Commit{&c}})
 }
 
 func (s *SBFT) handleCommit(c *Subject, src uint64) {

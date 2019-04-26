@@ -18,14 +18,10 @@ package simplebft
 
 import (
 	"fmt"
-
-	"github.com/hyperledger/fabric/common/flogging"
 )
 
 const maxBacklogSeq = 4
 const msgPerSeq = 3 // (pre)prepare, commit, checkpoint
-
-var logger = flogging.MustGetLogger("orderer.consensus.sbft.simplebft")
 
 func (s *SBFT) testBacklogMessage(m *Msg, src uint64) bool {
 	test := func(seq *SeqView) bool {

@@ -18,23 +18,22 @@ package simplebft
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/protos/utils"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
 )
 
 func (s *SBFT) makeBatch(seq uint64, prevHash []byte, data [][]byte) *Batch {
-	datahash := merkleHashData(data)
+	//datahash := merkleHashData(data)
 
+	block := utils.UnmarshalBlockOrPanic(data[0])
 	batchhead := &BatchHeader{
 		Seq:      seq,
 		PrevHash: prevHash,
-		DataHash: datahash,
+		DataHash: block.GetHeader().DataHash,
 	}
-	rawHeader, err := proto.Marshal(batchhead)
-	if err != nil {
-		panic(err)
-	}
+	rawHeader := utils.MarshalOrPanic(batchhead)
 	return &Batch{
 		Header:   rawHeader,
 		Payloads: data,
@@ -49,9 +48,11 @@ func (s *SBFT) checkBatch(b *Batch, checkData bool, needSigs bool) (*BatchHeader
 	}
 
 	if checkData {
-		datahash := merkleHashData(b.Payloads)
+		//datahash := merkleHashData(b.Payloads)
+		block := utils.UnmarshalBlockOrPanic(b.Payloads[0])
+		datahash := block.GetHeader().DataHash
 		if !reflect.DeepEqual(datahash, batchheader.DataHash) {
-			return nil, fmt.Errorf("malformed batches: invalid hash")
+			return nil, fmt.Errorf("malformed blocks: invalid hash")
 		}
 	}
 
@@ -59,7 +60,7 @@ func (s *SBFT) checkBatch(b *Batch, checkData bool, needSigs bool) (*BatchHeader
 		// TODO check against root hash, which should be part of constructor
 	} else if needSigs {
 		if len(b.Signatures) < s.oneCorrectQuorum() {
-			return nil, fmt.Errorf("insufficient number of signatures on batches: need %d, got %d", s.oneCorrectQuorum(), len(b.Signatures))
+			return nil, fmt.Errorf("insufficient number of signatures on blocks: need %d, got %d", s.oneCorrectQuorum(), len(b.Signatures))
 		}
 	}
 
@@ -97,21 +98,21 @@ func (b *Batch) DecodeHeader() *BatchHeader {
 //		req := &Request{Payload: pl}
 //		reqs = append(reqs, req)
 //	}
-//	batches := make([][]*Request, 0, 1)
+//	blocks := make([][]*Request, 0, 1)
 //	comms := [][]filter.Committer{}
 //	for _, r := range reqs {
 //		b, c, valid := s.sys.Validate(s.chainId, r)
 //		if !valid {
 //			return false, nil
 //		}
-//		batches = append(batches, b...)
+//		blocks = append(blocks, b...)
 //		comms = append(comms, c...)
 //	}
-//	if len(batches) > 1 || len(batches) != len(comms) {
+//	if len(blocks) > 1 || len(blocks) != len(comms) {
 //		return false, nil
 //	}
 //
-//	if len(batches) == 0 {
+//	if len(blocks) == 0 {
 //		_, committer := s.sys.Cut(s.chainId)
 //		return true, committer
 //	} else {

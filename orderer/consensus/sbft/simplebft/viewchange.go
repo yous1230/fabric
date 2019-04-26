@@ -38,7 +38,7 @@ func (s *SBFT) sendViewChange() {
 		q = append(q, &s.cur.subject)
 	}
 
-	// TODO fix batches synchronization as we send no payload here
+	// TODO fix blocks synchronization as we send no payload here
 	checkpoint := *s.sys.LastBatch(s.chainId)
 	checkpoint.Payloads = nil // don't send the big payload
 

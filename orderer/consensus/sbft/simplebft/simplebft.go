@@ -67,7 +67,7 @@ type SBFT struct {
 	config            Config
 	id                uint64
 	view              uint64
-	batches           [][]*Request
+	blocks            [][]*Request
 	batchTimer        Canceller
 	cur               reqInfo
 	activeView        bool
@@ -101,7 +101,7 @@ type replicaInfo struct {
 	viewchange       *ViewChange
 }
 
-var log = logging.MustGetLogger("sbft")
+var logger = logging.MustGetLogger("orderer.consensus.sbft.simplebft")
 
 type dummyCanceller struct{}
 
@@ -122,7 +122,7 @@ func New(id uint64, chainID string, config *Config, sys System) (*SBFT, error) {
 		replicaState:    make([]replicaInfo, config.N),
 		pending:         make(map[string]*Request),
 		validated:       make(map[string]bool),
-		batches:         make([][]*Request, 0, 3),
+		blocks:          make([][]*Request, 0, 3),
 		//primarycommitters: make([][]filter.Committer, 0),
 	}
 	s.sys.AddReceiver(chainID, s)
@@ -229,7 +229,7 @@ func (s *SBFT) broadcast(m *Msg) {
 
 // Receive is the ingress method for SBFT messages.
 func (s *SBFT) Receive(m *Msg, src uint64) {
-	logger.Debugf("replica %d: received message from %d: %s", s.id, src, m)
+	logger.Debugf("replica %d: received message from %d: %s", s.id, src, m.Type)
 
 	if h := m.GetHello(); h != nil {
 		s.handleHello(h, src)

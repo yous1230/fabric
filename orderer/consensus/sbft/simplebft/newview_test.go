@@ -90,7 +90,7 @@ func TestXsetNoNew(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(prevBatch, prev) {
-		t.Errorf("batches don't match: %v, %v", prevBatch.DecodeHeader(), prev.DecodeHeader())
+		t.Errorf("blocks don't match: %v, %v", prevBatch.DecodeHeader(), prev.DecodeHeader())
 	}
 }
 

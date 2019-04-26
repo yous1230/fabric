@@ -126,11 +126,11 @@ func TestMultiChain(t *testing.T) {
 			// was written to the "ledger"
 			j, _ := strconv.ParseInt(chainId, 10, 64)
 			if j%2 == 0 && len(a.batches[chainId]) != 1 {
-				t.Fatalf("expected one batches on chain %s", chainId)
+				t.Fatalf("expected one blocks on chain %s", chainId)
 			}
 			// in other cases, we should have at most an empty ledger
 			if j%2 != 0 && len(a.batches[chainId]) != 0 {
-				t.Fatalf("expected one batches on chain %s", chainId)
+				t.Fatalf("expected one blocks on chain %s", chainId)
 			}
 		}
 	}
@@ -162,7 +162,7 @@ func TestSBFT(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -242,7 +242,7 @@ func TestSBFTDelayed(t *testing.T) {
 	sys.Run()
 	for i, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Errorf("expected execution of 2 batches on %d", i)
+			t.Errorf("expected execution of 2 blocks on %d", i)
 			continue
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
@@ -275,7 +275,7 @@ func TestN1(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches")
+			t.Fatal("expected execution of 1 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -363,7 +363,7 @@ func TestByzPrimaryN4(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r2}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed first")
@@ -418,10 +418,10 @@ func TestNewPrimaryHandlingViewChange(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) < 1 {
-			t.Fatal("expected execution of at least one batches")
+			t.Fatal("expected execution of at least one blocks")
 		}
 		if a.batches[chainId][0].Payloads != nil && !reflect.DeepEqual(adapters[2].batches[chainId][0].Payloads, a.batches[chainId][0].Payloads) {
-			t.Error("consensus violated on first batches at replica", a.id)
+			t.Error("consensus violated on first blocks at replica", a.id)
 		}
 	}
 }
@@ -470,7 +470,7 @@ func TestByzPrimaryBullyingSingleReplica(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if a.id != 1 && len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches at all except replica 1")
+			t.Fatal("expected execution of 1 blocks at all except replica 1")
 		}
 	}
 }
@@ -507,7 +507,7 @@ func TestViewChange(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches")
+			t.Fatal("expected execution of 1 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -560,7 +560,7 @@ func TestMsgReordering(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches")
+			t.Fatal("expected execution of 1 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -613,7 +613,7 @@ func TestBacklogReordering(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches")
+			t.Fatal("expected execution of 1 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -653,7 +653,7 @@ func TestViewChangeWithRetransmission(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatal("expected execution of 1 batches")
+			t.Fatal("expected execution of 1 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -727,7 +727,7 @@ func TestViewChangeXset(t *testing.T) {
 			continue
 		}
 		if len(a.batches[chainId]) != 2 {
-			t.Fatalf("expected execution of 1 batches: %v", a.batches[chainId])
+			t.Fatalf("expected execution of 1 blocks: %v", a.batches[chainId])
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed first")
@@ -781,7 +781,7 @@ func TestRestart(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatalf("expected execution of 2 batches, %d got %v", a.id, a.batches)
+			t.Fatalf("expected execution of 2 blocks, %d got %v", a.id, a.batches)
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -846,7 +846,7 @@ func TestAbdicatingPrimary(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 1 {
-			t.Fatalf("expected execution of 1 batches, %d got %v", a.id, a.batches[chainId])
+			t.Fatalf("expected execution of 1 blocks, %d got %v", a.id, a.batches[chainId])
 		}
 	}
 }
@@ -910,7 +910,7 @@ func TestRestartAfterPrepare(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -980,7 +980,7 @@ func TestRestartAfterCommit(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -1050,7 +1050,7 @@ func TestRestartAfterCheckpoint(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -1140,7 +1140,7 @@ func TestErroneousViewChange(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")
@@ -1216,7 +1216,7 @@ func TestRestartMissedViewChange(t *testing.T) {
 
 	for _, a := range adapters {
 		if len(a.batches[chainId]) == 0 {
-			t.Fatalf("expected execution of some batches on %d", a.id)
+			t.Fatalf("expected execution of some blocks on %d", a.id)
 		}
 
 		if !reflect.DeepEqual([][]byte{r3}, a.batches[chainId][len(a.batches[chainId])-1].Payloads) {
@@ -1259,7 +1259,7 @@ func TestFullBacklog(t *testing.T) {
 	}
 	for _, a := range adapters {
 		if len(a.batches[chainId]) == 0 {
-			t.Fatalf("expected execution of batches on %d", a.id)
+			t.Fatalf("expected execution of blocks on %d", a.id)
 		}
 		bh := a.batches[chainId][len(a.batches[chainId])-1].DecodeHeader()
 		if bh.Seq != 10 {
@@ -1331,7 +1331,7 @@ func TestHelloMsg(t *testing.T) {
 
 	for i, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatalf("expected execution of 2 batches but executed %d     %d", len(a.batches[chainId]), i)
+			t.Fatalf("expected execution of 2 blocks but executed %d     %d", len(a.batches[chainId]), i)
 		}
 	}
 }
@@ -1407,7 +1407,7 @@ func TestViewChangeTimer(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatalf("%d: expected execution of 2 batches: %v", a.id, a.batches[chainId])
+			t.Fatalf("%d: expected execution of 2 blocks: %v", a.id, a.batches[chainId])
 		}
 		if a.id != 3 {
 			if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
@@ -1469,7 +1469,7 @@ func TestResendViewChange(t *testing.T) {
 	sys.Run()
 	for _, a := range adapters {
 		if len(a.batches[chainId]) != 2 {
-			t.Fatal("expected execution of 2 batches")
+			t.Fatal("expected execution of 2 blocks")
 		}
 		if !reflect.DeepEqual([][]byte{r1}, a.batches[chainId][0].Payloads) {
 			t.Error("wrong request executed (1)")

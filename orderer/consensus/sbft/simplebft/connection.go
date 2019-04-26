@@ -35,14 +35,14 @@ func (s *SBFT) Connection(replica uint64) {
 	}
 
 	// A reconnecting replica can play forward its blockchain to
-	// the batches listed in the hello message.  However, the
-	// currently in-flight batches will not be reflected in the
+	// the blocks listed in the hello message.  However, the
+	// currently in-flight blocks will not be reflected in the
 	// Hello message, nor will all messages be present to actually
-	// commit the in-flight batches at the reconnecting replica.
+	// commit the in-flight blocks at the reconnecting replica.
 	//
 	// Therefore we also send the most recent (pre)prepare,
 	// commit, checkpoint so that the reconnecting replica can
-	// catch up on the in-flight batches.
+	// catch up on the in-flight blocks.
 
 	batchheader, err := s.checkBatch(&batch, false, true)
 	if err != nil {
@@ -66,15 +66,15 @@ func (s *SBFT) Connection(replica uint64) {
 
 func (s *SBFT) handleHello(h *Hello, src uint64) {
 	bh, err := s.checkBatch(h.Batch, false, true)
-	logger.Debugf("replica %d: got hello for batches %d from replica %d", s.id, bh.Seq, src)
+	logger.Debugf("replica %d: got hello for blocks %d from replica %d", s.id, bh.Seq, src)
 
 	if err != nil {
-		logger.Warningf("replica %d: invalid hello batches from %d: %s", s.id, src, err)
+		logger.Warningf("replica %d: invalid hello blocks from %d: %s", s.id, src, err)
 		return
 	}
 
 	if s.sys.LastBatch(s.chainId).DecodeHeader().Seq < bh.Seq {
-		logger.Debugf("replica %d: delivering batches %d after hello from replica %d", s.id, bh.Seq, src)
+		logger.Debugf("replica %d: delivering blocks %d after hello from replica %d", s.id, bh.Seq, src)
 		//blockOK, committers := s.getCommittersFromBatch(h.Batch)
 		//if blockOK {
 		s.deliverBatch(h.Batch)

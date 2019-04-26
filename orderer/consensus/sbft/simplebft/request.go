@@ -20,10 +20,10 @@ import (
 	"time"
 )
 
-// Request proposes a new request to the BFT network.
+// Request proposes a new request to the BFT network.ls
 func (s *SBFT) Request(req []byte) {
 	logger.Debugf("Replica %d: broadcasting a request", s.id)
-	s.broadcast(&Msg{&Msg_Request{&Request{req}}})
+	s.broadcast(&Msg{Type: &Msg_Request{&Request{Payload: req}}})
 }
 
 func (s *SBFT) handleRequest(req *Request, src uint64) {
@@ -31,7 +31,7 @@ func (s *SBFT) handleRequest(req *Request, src uint64) {
 	logger.Infof("Replica %d: inserting %x into pending", s.id, key)
 	s.pending[key] = req
 	if s.isPrimary() && s.activeView {
-		batches, valid := s.sys.Validate(s.chainId, req)
+		blocks, valid := s.sys.Validate(s.chainId, req)
 		if !valid {
 			logger.Errorf("Validate request invalid")
 			// this one is problematic, lets skip it
@@ -39,10 +39,10 @@ func (s *SBFT) handleRequest(req *Request, src uint64) {
 			return
 		}
 		s.validated[key] = valid
-		if len(batches) == 0 {
+		if len(blocks) == 0 {
 			s.startBatchTimer()
 		} else {
-			s.batches = append(s.batches, batches...)
+			s.blocks = append(s.blocks, blocks...)
 			s.maybeSendNextBatch()
 		}
 	}
@@ -58,16 +58,16 @@ func (s *SBFT) startBatchTimer() {
 
 func (s *SBFT) cutAndMaybeSend() {
 	batch := s.sys.Cut(s.chainId)
-	s.batches = append(s.batches, batch)
+	s.blocks = append(s.blocks, batch)
 	s.maybeSendNextBatch()
 }
 
 func (s *SBFT) batchSize() uint64 {
 	size := uint64(0)
-	if len(s.batches) == 0 {
+	if len(s.blocks) == 0 {
 		return size
 	}
-	for _, req := range s.batches[0] {
+	for _, req := range s.blocks[0] {
 		size += uint64(len(req.Payload))
 	}
 	return size
@@ -87,12 +87,12 @@ func (s *SBFT) maybeSendNextBatch() {
 		return
 	}
 
-	if len(s.batches) == 0 {
+	if len(s.blocks) == 0 {
 		hasPending := len(s.pending) != 0
 		for k, req := range s.pending {
 			if s.validated[k] == false {
 				batches, valid := s.sys.Validate(s.chainId, req)
-				s.batches = append(s.batches, batches...)
+				s.blocks = append(s.blocks, batches...)
 				if !valid {
 					logger.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
 					delete(s.pending, k)
@@ -101,20 +101,20 @@ func (s *SBFT) maybeSendNextBatch() {
 				s.validated[k] = true
 			}
 		}
-		if len(s.batches) == 0 {
-			// if we have no pending, every req was included in batches
+		if len(s.blocks) == 0 {
+			// if we have no pending, every req was included in blocks
 			if !hasPending {
 				return
 			}
 			// we have pending reqs that were just sent for validation or
 			// were already sent (they are in s.validated)
 			batch := s.sys.Cut(s.chainId)
-			s.batches = append(s.batches, batch)
+			s.blocks = append(s.blocks, batch)
 		}
 	}
 
-	batch := s.batches[0]
-	s.batches = s.batches[1:]
-	logger.Infof( "Send Preprepare batch %v ", batch)
-	s.sendPreprepare(batch)
+	block := s.blocks[0]
+	s.blocks = s.blocks[1:]
+	logger.Infof("Send Preprepare block %v ", block)
+	s.sendPreprepare(block)
 }

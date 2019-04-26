@@ -20,7 +20,7 @@ import "reflect"
 
 func (s *SBFT) sendPrepare() {
 	p := s.cur.subject
-	s.broadcast(&Msg{&Msg_Prepare{&p}})
+	s.broadcast(&Msg{Type: &Msg_Prepare{&p}})
 }
 
 func (s *SBFT) handlePrepare(p *Subject, src uint64) {

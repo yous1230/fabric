@@ -39,7 +39,9 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	s "github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
+	"github.com/hyperledger/fabric/protos/utils"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -63,6 +65,7 @@ type Backend struct {
 
 	// chainId to instance mapping
 	consensus   map[string]s.Receiver
+	bc          map[string]*blockCreator
 	lastBatches map[string]*s.Batch
 	supports    map[string]consensus.ConsenterSupport
 }
@@ -102,6 +105,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 		peerInfo:    make(map[string]*PeerInfo),
 		supports:    make(map[string]consensus.ConsenterSupport),
 		consensus:   make(map[string]s.Receiver),
+		bc:          make(map[string]*blockCreator),
 		lastBatches: make(map[string]*s.Batch),
 	}
 
@@ -151,11 +155,11 @@ func (b *Backend) GetMyId() uint64 {
 
 // Enqueue enqueues an Envelope for a chainId for ordering, marshalling it first
 func (b *Backend) Enqueue(chainID string, env *cb.Envelope) error {
-	requestbytes, err := proto.Marshal(env)
+	requestBytes, err := proto.Marshal(env)
 	if err != nil {
 		return err
 	}
-	b.enqueueRequest(chainID, requestbytes)
+	b.enqueueRequest(chainID, requestBytes)
 	return nil
 }
 
@@ -245,48 +249,108 @@ func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport
 }
 
 func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool) {
-	// ([][]*cb.Envelope, [][]filter.Committer, bool) {
-	// If the message is a valid normal message and fills a batch, the batch, committers, true is returned
-	// If the message is a valid special message (like a config message) it terminates the current batch
-	// and returns the current batch and committers (if it is not empty), plus a second batch containing the special transaction and commiter, and true
+	// ([][]*cb.Envelope, bool)
+	// If the message is a valid normal message and fills a batch, the batch, true is returned
+	// If the message is a valid special message (like a config message) it terminate the current batch
+	// and returns the current batch, plus a second batch containing the special transaction and true
 	logger.Debugf("Validate request %v for chain %s", req, chainID)
 	env := &cb.Envelope{}
 	err := proto.Unmarshal(req.Payload, env)
 	if err != nil {
 		logger.Panicf("Request format error: %s", err)
 	}
-	envbatch, accepted := b.supports[chainID].BlockCutter().Ordered(env)
-	if accepted {
-		if len(envbatch) == 1 {
-			rb1 := toRequestBatch(envbatch[0])
+
+	batches, pending, err := b.ordered(chainID, env)
+	if err != nil {
+		logger.Errorf("Failed to order message: %s", err)
+		return nil, false
+	}
+	blocks := b.propose(chainID, batches...)
+
+	if pending {
+		if len(blocks) == 1 {
+			rb1 := toRequestBlock(blocks[0])
 			return [][]*s.Request{rb1}, true
 		}
-		if len(envbatch) == 2 {
-			rb1 := toRequestBatch(envbatch[0])
-			rb2 := toRequestBatch(envbatch[1])
+		if len(blocks) == 2 {
+			rb1 := toRequestBlock(blocks[0])
+			rb2 := toRequestBlock(blocks[1])
 			return [][]*s.Request{rb1, rb2}, true
 		}
 
 		return nil, true
 	}
+
 	return nil, false
 }
 
-func (b *Backend) Cut(chainID string) ([]*s.Request) {
-	envbatch := b.supports[chainID].BlockCutter().Cut()
-	return toRequestBatch(envbatch)
+func (b *Backend) propose(chainID string, batches ...[]*cb.Envelope) (blocks []*cb.Block) {
+	for _, batch := range batches {
+		block := b.bc[chainID].createNextBlock(batch)
+		logger.Infof("Created block [%d]", block.Header.Number)
+		blocks = append(blocks, block)
+	}
+
+	return
 }
 
-func toRequestBatch(envelopes []*cb.Envelope) []*s.Request {
-	rqs := make([]*s.Request, 0, len(envelopes))
-	for _, e := range envelopes {
-		requestbytes, err := proto.Marshal(e)
-		if err != nil {
-			logger.Panicf("Cannot marshal envelope: %s", err)
-		}
-		rq := &s.Request{Payload: requestbytes}
-		rqs = append(rqs, rq)
+func (b *Backend) isConfig(env *cb.Envelope) bool {
+	h, err := utils.ChannelHeader(env)
+	if err != nil {
+		logger.Panicf("failed to extract channel header from envelope")
 	}
+
+	return h.Type == int32(cb.HeaderType_CONFIG) || h.Type == int32(cb.HeaderType_ORDERER_TRANSACTION)
+}
+
+// Orders the envelope in the `req` content. Request.
+// Returns
+//   -- batches [][]*cb.Envelope; the batches cut,
+//   -- pending bool; if there are envelopes pending to be ordered,
+//   -- err error; the error encountered, if any.
+// It takes care of config messages as well as the revalidation of messages if the config sequence has advanced.
+func (b *Backend) ordered(chainID string, payload *cb.Envelope) (batches [][]*cb.Envelope, pending bool, err error) {
+	if b.isConfig(payload) {
+		// ConfigMsg
+		logger.Warning("Config message was validated")
+		payload, _, err = b.supports[chainID].ProcessConfigMsg(payload)
+		if err != nil {
+			return nil, true, errors.Errorf("bad config message: %s", err)
+		}
+
+		batch := b.supports[chainID].BlockCutter().Cut()
+		batches = [][]*cb.Envelope{}
+		if len(batch) != 0 {
+			batches = append(batches, batch)
+		}
+		batches = append(batches, []*cb.Envelope{payload})
+		return batches, false, nil
+	}
+	// it is a normal message
+	logger.Warning("Normal message was validated")
+	if _, err := b.supports[chainID].ProcessNormalMsg(payload); err != nil {
+		return nil, true, errors.Errorf("bad normal message: %s", err)
+	}
+
+	batches, pending = b.supports[chainID].BlockCutter().Ordered(payload)
+	return batches, pending, nil
+}
+
+func (b *Backend) Cut(chainID string) []*s.Request {
+	envBatch := b.supports[chainID].BlockCutter().Cut()
+	block := b.bc[chainID].createNextBlock(envBatch)
+	return toRequestBlock(block)
+}
+
+func toRequestBlock(block *cb.Block) []*s.Request {
+	rqs := make([]*s.Request, 0, 1)
+	requestBytes, err := utils.Marshal(block)
+	if err != nil {
+		logger.Panicf("Cannot marshal envelope: %s", err)
+	}
+	rq := &s.Request{Payload: requestBytes}
+	rqs = append(rqs, rq)
+
 	return rqs
 }
 
@@ -357,6 +421,11 @@ func (b *Backend) Unicast(chainID string, msg *s.Msg, dest uint64) error {
 // AddReceiver adds a receiver instance for a given chainId
 func (b *Backend) AddReceiver(chainId string, recv s.Receiver) {
 	b.consensus[chainId] = recv
+	block := b.supports[chainId].Block(b.supports[chainId].Height() - 1)
+	b.bc[chainId] = &blockCreator{
+		hash:   block.Header.Hash(),
+		number: block.Header.Number,
+	}
 	b.lastBatches[chainId] = &s.Batch{Header: nil, Signatures: nil, Payloads: [][]byte{}}
 }
 
@@ -378,17 +447,19 @@ func (b *Backend) Timer(d time.Duration, tf func()) s.Canceller {
 
 // Deliver writes a block
 func (b *Backend) Deliver(chainId string, batch *s.Batch) {
-	blockContents := make([]*cb.Envelope, 0, len(batch.Payloads))
-	for _, p := range batch.Payloads {
-		envelope := &cb.Envelope{}
-		err := proto.Unmarshal(p, envelope)
-		if err == nil {
-			blockContents = append(blockContents, envelope)
-		} else {
-			logger.Warningf("Payload cannot be unmarshalled.")
-		}
-	}
-	block := b.supports[chainId].CreateNextBlock(blockContents)
+	//blockContents := make([]*cb.Envelope, 0, len(batch.Payloads))
+	//for _, p := range batch.Payloads {
+	//	envelope := &cb.Envelope{}
+	//	err := proto.Unmarshal(p, envelope)
+	//	if err == nil {
+	//		blockContents = append(blockContents, envelope)
+	//	} else {
+	//		logger.Warningf("Payload cannot be unmarshalled.")
+	//	}
+	//}
+	//block := b.supports[chainId].CreateNextBlock(blockContents)
+
+	block := utils.UnmarshalBlockOrPanic(batch.Payloads[0])
 
 	// TODO SBFT needs to use Rawledger's structures and signatures over the Block.
 	// This a quick and dirty solution to make it work.

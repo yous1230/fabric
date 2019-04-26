@@ -24,6 +24,10 @@ import (
 func (s *SBFT) sendPreprepare(batch []*Request) {
 	seq := s.nextSeq()
 
+	if len(batch) != 1 {
+		logger.Panicf("replica %d: sendPreprepare batch length %d", s.id, len(batch))
+	}
+
 	data := make([][]byte, len(batch))
 	for i, req := range batch {
 		data[i] = req.Payload
@@ -37,7 +41,7 @@ func (s *SBFT) sendPreprepare(batch []*Request) {
 	}
 
 	s.sys.Persist(s.chainId, preprepared, m)
-	s.broadcast(&Msg{&Msg_Preprepare{m}})
+	s.broadcast(&Msg{Type: &Msg_Preprepare{m}})
 	logger.Infof("replica %d: sendPreprepare", s.id)
 	s.handleCheckedPreprepare(m)
 }
@@ -52,7 +56,7 @@ func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
 		return
 	}
 	nextSeq := s.nextSeq()
-	if *pp.Seq != nextSeq {
+	if (*pp.Seq).Seq != nextSeq.Seq || (*pp.Seq).View != nextSeq.View {
 		logger.Infof("replica %d: preprepare does not match expected %v, got %v", s.id, nextSeq, *pp.Seq)
 		return
 	}
@@ -60,20 +64,20 @@ func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
 		logger.Infof("replica %d: duplicate preprepare for %v", s.id, *pp.Seq)
 		return
 	}
-	if pp.Batch == nil {
-		logger.Infof("replica %d: preprepare without batches", s.id)
+	if pp.GetBatch() == nil {
+		logger.Infof("replica %d: preprepare without blocks", s.id)
 		return
 	}
 
 	batchheader, err := s.checkBatch(pp.Batch, true, false)
 	if err != nil || batchheader.Seq != pp.Seq.Seq {
-		logger.Infof("replica %d: preprepare %v batches head inconsistent from %d: %s", s.id, pp.Seq, src, err)
+		logger.Infof("replica %d: preprepare %v blocks head inconsistent from %d: %s", s.id, pp.Seq, src, err)
 		return
 	}
 
 	prevhash := s.sys.LastBatch(s.chainId).Hash()
 	if !bytes.Equal(batchheader.PrevHash, prevhash) {
-		logger.Infof("replica %d: preprepare batches prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
+		logger.Infof("replica %d: preprepare blocks prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
 		return
 	}
 
