@@ -265,10 +265,11 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 		logger.Errorf("Failed to order message: %s", err)
 		return nil, false
 	}
-	blocks := b.propose(chainID, batches...)
-
 	logger.Info("Envelope order pending: %v", pending)
+
 	if !pending {
+		blocks := b.propose(chainID, batches...)
+
 		if len(blocks) == 1 {
 			rb1 := toRequestBlock(blocks[0])
 			return [][]*s.Request{rb1}, true
@@ -279,10 +280,9 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 			return [][]*s.Request{rb1, rb2}, true
 		}
 
-		return nil, true
 	}
 
-	return nil, false
+	return nil, true
 }
 
 func (b *Backend) propose(chainID string, batches ...[]*cb.Envelope) (blocks []*cb.Block) {
