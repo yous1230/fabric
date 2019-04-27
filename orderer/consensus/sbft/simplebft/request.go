@@ -27,21 +27,24 @@ func (s *SBFT) Request(req []byte) {
 }
 
 func (s *SBFT) handleRequest(req *Request, src uint64) {
-	key := hash2str(hash(req.Payload))
-	logger.Infof("Replica %d: inserting %x into pending", s.id, key)
-	s.pending[key] = req
+	logger.Infof("Replica %d: inserting request", s.id)
 	if s.isPrimary() && s.activeView {
 		blocks, valid := s.sys.Validate(s.chainId, req)
 		if !valid {
 			logger.Errorf("Validate request invalid")
 			// this one is problematic, lets skip it
-			delete(s.pending, key)
+			//delete(s.pending, key)
 			return
 		}
-		s.validated[key] = valid
 		if len(blocks) == 0 {
 			s.startBatchTimer()
 		} else {
+			for _, v := range blocks {
+				key := hash2str(hash(v[0].Payload))
+				logger.Infof("Replica %d: inserting %x into pending", s.id, key)
+				s.pending[key] = v[0]
+				s.validated[key] = valid
+			}
 			s.blocks = append(s.blocks, blocks...)
 			s.maybeSendNextBatch()
 		}

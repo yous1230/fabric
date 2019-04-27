@@ -267,7 +267,7 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 	}
 	blocks := b.propose(chainID, batches...)
 
-	logger.Info("Envelope order pending: %b", pending)
+	logger.Info("Envelope order pending: %v", pending)
 	if !pending {
 		if len(blocks) == 1 {
 			rb1 := toRequestBlock(blocks[0])
