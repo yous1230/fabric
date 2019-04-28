@@ -315,7 +315,7 @@ func (b *Backend) isConfig(env *cb.Envelope) bool {
 func (b *Backend) ordered(chainID string, payload *cb.Envelope) (batches [][]*cb.Envelope, pending bool, err error) {
 	if b.isConfig(payload) {
 		// ConfigMsg
-		logger.Warning("Config message was validated")
+		logger.Infof("Config message was validated")
 		payload, _, err = b.supports[chainID].ProcessConfigMsg(payload)
 		if err != nil {
 			return nil, true, errors.Errorf("bad config message: %s", err)
@@ -330,7 +330,7 @@ func (b *Backend) ordered(chainID string, payload *cb.Envelope) (batches [][]*cb
 		return batches, false, nil
 	}
 	// it is a normal message
-	logger.Warning("Normal message was validated")
+	logger.Infof("Normal message was validated")
 	if _, err := b.supports[chainID].ProcessNormalMsg(payload); err != nil {
 		return nil, true, errors.Errorf("bad normal message: %s", err)
 	}
