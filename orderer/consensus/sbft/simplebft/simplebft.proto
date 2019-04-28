@@ -23,8 +23,8 @@ package simplebft;
 message Config {
         uint64 n = 1;
         uint64 f = 2;
-        uint64 batch_duration_nsec = 3;
-        uint64 batch_size_bytes = 4;
+        uint64 batch_duration_nsec = 3; // Deprecated instead of support.SharedConfig().BatchTimeout()
+        uint64 batch_size_bytes = 4; // Deprecated instead of support.SharedConfig().BatchSize()
         uint64 request_timeout_nsec = 5;
 };
 

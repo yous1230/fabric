@@ -67,7 +67,7 @@ func newChain(sbft *consenter, support consensus.ConsenterSupport) *chain {
 		sbft.consensusStack = createConsensusStack(sbft)
 		sbft.sbftPeers = make(map[string]*simplebft.SBFT)
 	}
-	sbft.sbftPeers[support.ChainID()] = initSbftPeer(support.ChainID(), sbft, support)
+	sbft.sbftPeers[support.ChainID()] = initSbftPeer(sbft, support)
 
 	return &chain{
 		chainID:         support.ChainID(),
@@ -84,22 +84,27 @@ func createConsensusStack(sbft *consenter) *consensusStack {
 		logger.Errorf("Error when trying to connect: %s", err)
 		panic(err)
 	}
-	persist := persist.New(sbft.sbftStackConfig.DataDir)
-	backend, err := backend.NewBackend(sbft.config.Peers, conn, persist)
+	pPersist := persist.New(sbft.sbftStackConfig.DataDir)
+	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist)
 	if err != nil {
-		logger.Errorf("Backend instantiation error.")
+		logger.Errorf("Backend instantiation error: %v", err)
 		panic(err)
 	}
 
-	go conn.Server.Serve(conn.Listener)
+	go func() {
+		if err := conn.Server.Serve(conn.Listener); err != nil {
+			logger.Errorf("Backend Server start error: %v", err)
+			panic(err)
+		}
+	}()
 
 	return &consensusStack{
-		backend: backend,
-		persist: persist,
+		backend: pBackend,
+		persist: pPersist,
 	}
 }
 
-func initSbftPeer(chainID string, sbft *consenter, support consensus.ConsenterSupport) *simplebft.SBFT {
+func initSbftPeer(sbft *consenter, support consensus.ConsenterSupport) *simplebft.SBFT {
 	sbftPeer, err := sbft.consensusStack.backend.AddSbftPeer(support.ChainID(), support, sbft.config.Consensus)
 	if err != nil {
 		logger.Errorf("SBFT peer instantiation error.")

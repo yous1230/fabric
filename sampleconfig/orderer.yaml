@@ -402,11 +402,11 @@ Genesis:
 
     # Deprecated Batch Timeout: The amount of time to wait before creating a
     # batch.
-    DeprecatedBatchTimeout: 10s
+    DeprecatedBatchTimeout: 2s
 
     # DeprecatedBatchSize: The absolute maximum number of bytes allowed for
     # the serialized messages in a batch.
-    DeprecatedBatchSize: 99 MB
+    DeprecatedBatchSize: 20 MB
 
     # Defines the SBFT parameters when 'sbft' is specified as the 'OrdererType'
     SbftShared:

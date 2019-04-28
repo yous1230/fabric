@@ -71,7 +71,7 @@ func New(addr string, certFile string, keyFile string) (_ *Manager, err error) {
 	serverTls := c.tlsConfig
 	serverTls.ServerName = addr
 	c.Server = grpc.NewServer(grpc.Creds(credentials.NewTLS(serverTls)))
-	//go c.Server.Serve(c.Listener)
+
 	return c, nil
 }
 

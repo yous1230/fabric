@@ -111,6 +111,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 
 	var peerInfo []*PeerInfo
 	for addr, cert := range peers {
+		logger.Infof("New peer connect addr: %s", addr)
 		pi, err := connection.NewPeerInfo(addr, cert)
 		if err != nil {
 			return nil, err
@@ -265,7 +266,7 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 		logger.Errorf("Failed to order message: %s", err)
 		return nil, false
 	}
-	logger.Info("Envelope order pending: %v", pending)
+	logger.Info("Envelope order pending: %t", pending)
 
 	if !pending {
 		blocks := b.propose(chainID, batches...)
@@ -368,14 +369,14 @@ func (c *consensusConn) Consensus(_ *Handshake, srv Consensus_ConsensusServer) e
 
 	ch := make(chan *s.MultiChainMsg)
 	c.lock.Lock()
-	if oldch, ok := c.peers[peer.id]; ok {
+	if oldCh, ok := c.peers[peer.id]; ok {
 		logger.Debugf("replacing connection from replica %d", peer.id)
-		close(oldch)
+		close(oldCh)
 	}
 	c.peers[peer.id] = ch
 	c.lock.Unlock()
 
-	for chainID, _ := range c.supports {
+	for chainID := range c.supports {
 		((*Backend)(c)).enqueueConnection(chainID, peer.id)
 	}
 

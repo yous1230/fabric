@@ -22,7 +22,7 @@ import (
 
 // Request proposes a new request to the BFT network.ls
 func (s *SBFT) Request(req []byte) {
-	logger.Debugf("Replica %d: broadcasting a request", s.id)
+	logger.Infof("Replica %d: broadcasting a request", s.id)
 	s.broadcast(&Msg{Type: &Msg_Request{&Request{Payload: req}}})
 }
 
@@ -77,7 +77,6 @@ func (s *SBFT) batchSize() uint64 {
 }
 
 func (s *SBFT) maybeSendNextBatch() {
-	logger.Info("Enter maybeSendNextBatch")
 	if s.batchTimer != nil {
 		s.batchTimer.Cancel()
 		s.batchTimer = nil
