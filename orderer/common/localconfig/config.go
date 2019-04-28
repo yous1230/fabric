@@ -322,11 +322,11 @@ var Defaults = TopLevel{
 			N:                  1,
 			F:                  0,
 			RequestTimeoutNsec: uint64(time.Second.Nanoseconds()),
-			Peers:              map[string]string{":6101": "sbft/testdata/cert1.pem"},
+			Peers:              map[string]string{":7050": "sbft/testdata/cert1.pem"},
 		},
 	},
 	SbftLocal: SbftLocal{
-		PeerCommAddr: ":6101",
+		PeerCommAddr: ":7050",
 		CertFile:     "sbft/testdata/cert1.pem",
 		KeyFile:      "sbft/testdata/key.pem",
 		DataDir:      "/tmp",

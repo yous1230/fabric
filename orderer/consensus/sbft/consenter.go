@@ -63,6 +63,21 @@ func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata 
 func newChain(sbft *consenter, support consensus.ConsenterSupport) *chain {
 	logger.Infof("Starting a chain: %d", support.ChainID())
 
+	//m := &sbft.ConfigMetadata{}
+	//if err := proto.Unmarshal(support.SharedConfig().ConsensusMetadata(), m); err != nil {
+	//	return nil, errors.Wrap(err, "failed to unmarshal consensus metadata")
+	//}
+	//
+	//if support.SharedConfig().Capabilities().Kafka2RaftMigration() &&
+	//	support.SharedConfig().ConsensusMigrationState() != orderer.ConsensusType_MIG_STATE_NONE {
+	//	c.Logger.Debugf("SharedConfig().ConsensusMetadata(): %s", m.String())
+	//	c.Logger.Debugf("block metadata.Value dump: \n%s", hex.Dump(metadata.Value))
+	//}
+	//
+	//if m.Options == nil {
+	//	return nil, errors.New("etcdraft options have not been provided")
+	//}
+
 	if sbft.sbftPeers == nil {
 		sbft.consensusStack = createConsensusStack(sbft)
 		sbft.sbftPeers = make(map[string]*simplebft.SBFT)

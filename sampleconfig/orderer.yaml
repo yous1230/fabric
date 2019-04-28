@@ -384,7 +384,7 @@ Consensus:
 SbftLocal:
 
     # Address to use for SBFT internal communication
-    PeerCommAddr: ":6101"
+    PeerCommAddr: ":7050"
     CertFile: "sbft/testdata/cert1.pem"
     KeyFile: "sbft/testdata/key.pem"
     # Directory for SBFT data (persistence)
@@ -418,4 +418,4 @@ Genesis:
         RequestTimeoutNsec: 1000000000
         # Peers (PeerCommAddr) with the path of their cert
         Peers:
-            ":6101": "/var/hyperledger/orderer/sbft/cert1.pem"
+            ":7050": "/var/hyperledger/orderer/sbft/cert1.pem"

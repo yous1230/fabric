@@ -1,0 +1,34 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+option go_package = "github.com/hyperledger/fabric/protos/orderer/sbft";
+option java_package = "org.hyperledger.fabric.protos.orderer.sbft";
+
+package sbft;
+
+// ConfigMetadata is serialized and set as the value of ConsensusType.Metadata in
+// a channel configuration when the ConsensusType.Type is set "etcdraft".
+message ConfigMetadata {
+    repeated Consenter consenters = 1;
+    SbftShared options = 2;
+}
+
+// Consenter represents a consenting node (i.e. replica).
+message Consenter {
+    string host = 1;
+    uint32 port = 2;
+    bytes client_tls_cert = 3;
+    bytes server_tls_cert = 4;
+}
+
+// Defines the SBFT parameters when 'sbft' is specified as the 'OrdererType'
+message SbftShared {
+	uint32 n = 1;   // Number of peers
+	uint32 f = 2;   // Fault tolerance
+	uint32 request_timeout_nsec = 3; // Timeout of requests (seconds)
+}
