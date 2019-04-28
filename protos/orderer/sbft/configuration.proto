@@ -15,7 +15,7 @@ package sbft;
 // a channel configuration when the ConsensusType.Type is set "etcdraft".
 message ConfigMetadata {
     repeated Consenter consenters = 1;
-    SbftShared options = 2;
+    Options options = 2;
 }
 
 // Consenter represents a consenting node (i.e. replica).
@@ -27,7 +27,7 @@ message Consenter {
 }
 
 // Defines the SBFT parameters when 'sbft' is specified as the 'OrdererType'
-message SbftShared {
+message Options {
 	uint32 n = 1;   // Number of peers
 	uint32 f = 2;   // Fault tolerance
 	uint32 request_timeout_nsec = 3; // Timeout of requests (seconds)
