@@ -20,7 +20,7 @@ option go_package = "github.com/hyperledger/fabric/protos/orderer/sbft";
 
 package sbft;
 
-import "simplebft.proto";
+import "orderer/sbft/simplebft.proto";
 
 message consensus_config {
         simplebft.Config consensus = 1;
