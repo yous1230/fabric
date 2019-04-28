@@ -16,7 +16,11 @@ limitations under the License.
 
 package simplebft
 
-import "reflect"
+import (
+	"reflect"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+)
 
 func (s *SBFT) maybeSendCommit() {
 	if s.cur.prepared || len(s.cur.prep) < s.commonCaseQuorum()-1 {
@@ -30,10 +34,10 @@ func (s *SBFT) sendCommit() {
 	s.cur.prepared = true
 	c := s.cur.subject
 	s.sys.Persist(s.chainId, prepared, &c)
-	s.broadcast(&Msg{Type: &Msg_Commit{&c}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_Commit{Commit: &c}})
 }
 
-func (s *SBFT) handleCommit(c *Subject, src uint64) {
+func (s *SBFT) handleCommit(c *sb.Subject, src uint64) {
 	if c.Seq.Seq < s.cur.subject.Seq.Seq {
 		// old message
 		return

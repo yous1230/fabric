@@ -16,7 +16,11 @@ limitations under the License.
 
 package simplebft
 
-import "time"
+import (
+	"time"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+)
 
 func (s *SBFT) sendViewChange() {
 	s.view = s.nextView()
@@ -30,7 +34,7 @@ func (s *SBFT) sendViewChange() {
 	}
 	logger.Noticef("replica %d: sending viewchange for view %d", s.id, s.view)
 
-	var q, p []*Subject
+	var q, p []*sb.Subject
 	if s.cur.prepared {
 		p = append(p, &s.cur.subject)
 	}
@@ -42,7 +46,7 @@ func (s *SBFT) sendViewChange() {
 	checkpoint := *s.sys.LastBatch(s.chainId)
 	checkpoint.Payloads = nil // don't send the big payload
 
-	vc := &ViewChange{
+	vc := &sb.ViewChange{
 		View:       s.view,
 		Qset:       q,
 		Pset:       p,
@@ -53,7 +57,7 @@ func (s *SBFT) sendViewChange() {
 	s.cur.timeout.Cancel()
 
 	s.sys.Persist(s.chainId, viewchange, svc)
-	s.broadcast(&Msg{&Msg_ViewChange{svc}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_ViewChange{ViewChange: svc}})
 }
 
 func (s *SBFT) cancelViewChangeTimer() {
@@ -61,8 +65,8 @@ func (s *SBFT) cancelViewChangeTimer() {
 	s.viewChangeTimeout = time.Duration(s.config.RequestTimeoutNsec) * 2
 }
 
-func (s *SBFT) handleViewChange(svc *Signed, src uint64) {
-	vc := &ViewChange{}
+func (s *SBFT) handleViewChange(svc *sb.Signed, src uint64) {
+	vc := &sb.ViewChange{}
 	err := s.checkSig(svc, src, vc)
 	if err == nil {
 		_, err = s.checkBatch(vc.Checkpoint, false, true)

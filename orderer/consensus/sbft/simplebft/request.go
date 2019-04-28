@@ -18,15 +18,17 @@ package simplebft
 
 import (
 	"time"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 // Request proposes a new request to the BFT network.ls
 func (s *SBFT) Request(req []byte) {
 	logger.Infof("Replica %d: broadcasting a request", s.id)
-	s.broadcast(&Msg{Type: &Msg_Request{&Request{Payload: req}}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_Request{Request: &sb.Request{Payload: req}}})
 }
 
-func (s *SBFT) handleRequest(req *Request, src uint64) {
+func (s *SBFT) handleRequest(req *sb.Request, src uint64) {
 	logger.Infof("Replica %d: inserting request", s.id)
 	if s.isPrimary() && s.activeView {
 		blocks, valid := s.sys.Validate(s.chainId, req)

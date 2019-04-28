@@ -16,15 +16,19 @@ limitations under the License.
 
 package simplebft
 
-import "reflect"
+import (
+	"reflect"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+)
 
 // makeXset returns a request subject that should be proposed as blocks
 // for new-view.  If there is no request to select (null request), it
 // will return nil for subject.  makeXset always returns a blocks for
 // the most recent checkpoint.
-func (s *SBFT) makeXset(vcs []*ViewChange) (*Subject, *Batch, bool) {
+func (s *SBFT) makeXset(vcs []*sb.ViewChange) (*sb.Subject, *sb.Batch, bool) {
 	// first select base commit (equivalent to checkpoint/low water mark)
-	var best *Batch
+	var best *sb.Batch
 	for _, vc := range vcs {
 		seq := vc.Checkpoint.DecodeHeader().Seq
 		if best == nil || seq > best.DecodeHeader().Seq {
@@ -40,7 +44,7 @@ func (s *SBFT) makeXset(vcs []*ViewChange) (*Subject, *Batch, bool) {
 	logger.Debugf("replica %d: xset starts at commit %d", s.id, next)
 
 	// now determine which request could have executed for best+1
-	var xset *Subject
+	var xset *sb.Subject
 
 	// This is according to Castro's TOCS PBFT, Fig. 4
 	// find some message m in S,
@@ -114,8 +118,8 @@ nextm:
 			logger.Debugf("replica %d: found %d replicas for Qset %d", s.id, count, mtuple.Seq.Seq)
 
 			logger.Debugf("replica %d: selecting %d with %x", s.id, next, mtuple.Digest)
-			xset = &Subject{
-				Seq:    &SeqView{Seq: next, View: s.view},
+			xset = &sb.Subject{
+				Seq:    &sb.SeqView{Seq: next, View: s.view},
 				Digest: mtuple.Digest,
 			}
 			break nextm

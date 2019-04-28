@@ -19,9 +19,11 @@ package simplebft
 import (
 	"bytes"
 	"time"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
-func (s *SBFT) sendPreprepare(batch []*Request) {
+func (s *SBFT) sendPreprepare(batch []*sb.Request) {
 	seq := s.nextSeq()
 
 	if len(batch) != 1 {
@@ -35,18 +37,18 @@ func (s *SBFT) sendPreprepare(batch []*Request) {
 
 	lasthash := hash(s.sys.LastBatch(s.chainId).Header)
 
-	m := &Preprepare{
+	m := &sb.Preprepare{
 		Seq:   &seq,
 		Batch: s.makeBatch(seq.Seq, lasthash, data),
 	}
 
 	s.sys.Persist(s.chainId, preprepared, m)
-	s.broadcast(&Msg{Type: &Msg_Preprepare{m}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: m}})
 	logger.Infof("replica %d: sendPreprepare", s.id)
 	s.handleCheckedPreprepare(m)
 }
 
-func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
+func (s *SBFT) handlePreprepare(pp *sb.Preprepare, src uint64) {
 	if src == s.id {
 		logger.Infof("replica %d: ignoring preprepare from self: %d", s.id, src)
 		return
@@ -91,8 +93,8 @@ func (s *SBFT) handlePreprepare(pp *Preprepare, src uint64) {
 	s.handleCheckedPreprepare(pp)
 }
 
-func (s *SBFT) acceptPreprepare(pp *Preprepare) {
-	sub := Subject{Seq: pp.Seq, Digest: pp.Batch.Hash()}
+func (s *SBFT) acceptPreprepare(pp *sb.Preprepare) {
+	sub := sb.Subject{Seq: pp.Seq, Digest: pp.Batch.Hash()}
 
 	logger.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
 	s.sys.Persist(s.chainId, preprepared, pp)
@@ -101,13 +103,13 @@ func (s *SBFT) acceptPreprepare(pp *Preprepare) {
 		subject:    sub,
 		timeout:    s.sys.Timer(time.Duration(s.config.RequestTimeoutNsec)*time.Nanosecond, s.requestTimeout),
 		preprep:    pp,
-		prep:       make(map[uint64]*Subject),
-		commit:     make(map[uint64]*Subject),
-		checkpoint: make(map[uint64]*Checkpoint),
+		prep:       make(map[uint64]*sb.Subject),
+		commit:     make(map[uint64]*sb.Subject),
+		checkpoint: make(map[uint64]*sb.Checkpoint),
 	}
 }
 
-func (s *SBFT) handleCheckedPreprepare(pp *Preprepare) {
+func (s *SBFT) handleCheckedPreprepare(pp *sb.Preprepare) {
 	s.acceptPreprepare(pp)
 	if !s.isPrimary() {
 		s.sendPrepare()

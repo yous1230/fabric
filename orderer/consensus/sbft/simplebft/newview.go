@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 func (s *SBFT) maybeSendNewView() {
@@ -27,8 +29,8 @@ func (s *SBFT) maybeSendNewView() {
 		return
 	}
 
-	vset := make(map[uint64]*Signed)
-	var vcs []*ViewChange
+	vset := make(map[uint64]*sb.Signed)
+	var vcs []*sb.ViewChange
 
 	for src, state := range s.replicaState {
 		if state.viewchange != nil && state.viewchange.View == s.view {
@@ -43,7 +45,7 @@ func (s *SBFT) maybeSendNewView() {
 		return
 	}
 
-	var batch *Batch
+	var batch *sb.Batch
 	if xset == nil {
 		// no need for blocks, it is contained in the vset
 	} else if reflect.DeepEqual(s.cur.subject.Digest, xset.Digest) {
@@ -53,7 +55,7 @@ func (s *SBFT) maybeSendNewView() {
 		xset = nil
 	}
 
-	nv := &NewView{
+	nv := &sb.NewView{
 		View:  s.view,
 		Vset:  vset,
 		Xset:  xset,
@@ -62,13 +64,13 @@ func (s *SBFT) maybeSendNewView() {
 
 	logger.Noticef("replica %d: sending new view for %d", s.id, nv.View)
 	s.lastNewViewSent = nv
-	s.broadcast(&Msg{&Msg_NewView{nv}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_NewView{NewView: nv}})
 }
 
-func (s *SBFT) checkNewViewSignatures(nv *NewView) ([]*ViewChange, error) {
-	var vcs []*ViewChange
+func (s *SBFT) checkNewViewSignatures(nv *sb.NewView) ([]*sb.ViewChange, error) {
+	var vcs []*sb.ViewChange
 	for vcsrc, svc := range nv.Vset {
-		vc := &ViewChange{}
+		vc := &sb.ViewChange{}
 		err := s.checkSig(svc, vcsrc, vc)
 		if err == nil {
 			_, err = s.checkBatch(vc.Checkpoint, false, true)
@@ -85,7 +87,7 @@ func (s *SBFT) checkNewViewSignatures(nv *NewView) ([]*ViewChange, error) {
 	return vcs, nil
 }
 
-func (s *SBFT) handleNewView(nv *NewView, src uint64) {
+func (s *SBFT) handleNewView(nv *sb.NewView, src uint64) {
 	if nv == nil {
 		return
 	}
@@ -176,8 +178,8 @@ func (s *SBFT) handleNewView(nv *NewView, src uint64) {
 
 	//process pre-prepare if piggybacked to new-view
 	if nv.Batch != nil {
-		pp := &Preprepare{
-			Seq:   &SeqView{Seq: nv.Batch.DecodeHeader().Seq, View: s.view},
+		pp := &sb.Preprepare{
+			Seq:   &sb.SeqView{Seq: nv.Batch.DecodeHeader().Seq, View: s.view},
 			Batch: nv.Batch,
 		}
 		//blockOK, committers := s.getCommittersFromBatch(nv.Batch)

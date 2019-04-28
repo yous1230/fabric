@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/op/go-logging"
 )
 
@@ -36,7 +37,7 @@ var logger = logging.MustGetLogger("orderer/consensus/sbft")
 
 // Consenter interface implementation for new main application
 type consenter struct {
-	config          *ConsensusConfig
+	config          *sb.ConsensusConfig
 	consensusStack  *consensusStack
 	sbftStackConfig *backend.StackConfig
 	sbftPeers       map[string]*simplebft.SBFT
@@ -52,7 +53,7 @@ type chain struct {
 // New creates a new consenter for the SBFT consensus scheme.
 // It accepts messages being delivered via Enqueue, orders them, and then uses the blockcutter to form the messages
 // into blocks before writing to the given ledger.
-func New(c *ConsensusConfig, sc *backend.StackConfig) consensus.Consenter {
+func New(c *sb.ConsensusConfig, sc *backend.StackConfig) consensus.Consenter {
 	return &consenter{config: c, sbftStackConfig: sc}
 }
 

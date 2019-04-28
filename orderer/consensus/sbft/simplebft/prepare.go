@@ -16,14 +16,18 @@ limitations under the License.
 
 package simplebft
 
-import "reflect"
+import (
+	"reflect"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+)
 
 func (s *SBFT) sendPrepare() {
 	p := s.cur.subject
-	s.broadcast(&Msg{Type: &Msg_Prepare{&p}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_Prepare{Prepare: &p}})
 }
 
-func (s *SBFT) handlePrepare(p *Subject, src uint64) {
+func (s *SBFT) handlePrepare(p *sb.Subject, src uint64) {
 	if p.Seq.Seq < s.cur.subject.Seq.Seq {
 		// old message
 		return

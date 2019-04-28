@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 const defaultMaxReqCount = uint64(5)
@@ -42,11 +43,11 @@ type testSystemAdapter struct {
 
 	// chainId to instance mapping
 	receivers   map[string]Receiver
-	batches     map[string][]*Batch
+	batches     map[string][]*sb.Batch
 	persistence map[string][]byte
 
 	arrivals map[uint64]time.Duration
-	reqs     []*Request
+	reqs     []*sb.Request
 
 	key *ecdsa.PrivateKey
 }
@@ -91,7 +92,7 @@ func (t *testSystemAdapter) getArrival(dest uint64) time.Duration {
 	return arr
 }
 
-func (t *testSystemAdapter) Send(chainId string, msg *Msg, dest uint64) {
+func (t *testSystemAdapter) Send(chainId string, msg *sb.Msg, dest uint64) {
 	arr := t.getArrival(dest)
 	ev := &testMsgEvent{
 		inflight: arr,
@@ -102,7 +103,7 @@ func (t *testSystemAdapter) Send(chainId string, msg *Msg, dest uint64) {
 	}
 	// simulate time for marshalling (and unmarshalling)
 	bytes, _ := proto.Marshal(msg)
-	m2 := &Msg{}
+	m2 := &sb.Msg{}
 	_ = proto.Unmarshal(bytes, m2)
 	t.sys.enqueue(arr, ev)
 }
@@ -110,7 +111,7 @@ func (t *testSystemAdapter) Send(chainId string, msg *Msg, dest uint64) {
 type testMsgEvent struct {
 	inflight time.Duration
 	src, dst uint64
-	msg      *Msg
+	msg      *sb.Msg
 	chainId  string
 }
 
@@ -157,31 +158,31 @@ func (t *testSystemAdapter) Timer(d time.Duration, tf func()) Canceller {
 	return tt
 }
 
-func (t *testSystemAdapter) Deliver(chainId string, batch *Batch) {
+func (t *testSystemAdapter) Deliver(chainId string, batch *sb.Batch) {
 	if t.batches == nil {
-		t.batches = make(map[string][]*Batch)
+		t.batches = make(map[string][]*sb.Batch)
 	}
 	if t.batches[chainId] == nil {
-		t.batches[chainId] = make([]*Batch, 0, 1)
+		t.batches[chainId] = make([]*sb.Batch, 0, 1)
 	}
 	t.batches[chainId] = append(t.batches[chainId], batch)
 }
 
-func (t *testSystemAdapter) Validate(chainID string, req *Request) ([][]*Request, bool) {
+func (t *testSystemAdapter) Validate(chainID string, req *sb.Request) ([][]*sb.Request, bool) {
 	r := t.reqs
 	if t.reqs == nil || uint64(len(t.reqs)) == maxReqCount-uint64(1) {
-		t.reqs = make([]*Request, 0, maxReqCount-1)
+		t.reqs = make([]*sb.Request, 0, maxReqCount-1)
 	}
 	if uint64(len(r)) == maxReqCount-uint64(1) {
-		return [][]*Request{append(r, req)}, true
+		return [][]*sb.Request{append(r, req)}, true
 	}
 	t.reqs = append(t.reqs, req)
 	return nil, true
 }
 
-func (t *testSystemAdapter) Cut(chainID string) []*Request {
+func (t *testSystemAdapter) Cut(chainID string) []*sb.Request {
 	r := t.reqs
-	t.reqs = make([]*Request, 0, maxReqCount)
+	t.reqs = make([]*sb.Request, 0, maxReqCount)
 	return r
 }
 
@@ -205,10 +206,10 @@ func (t *testSystemAdapter) Restore(chainId string, key string, out proto.Messag
 		return false
 	}
 	err := proto.Unmarshal(val, out)
-	return (err == nil)
+	return err == nil
 }
 
-func (t *testSystemAdapter) LastBatch(chainId string) *Batch {
+func (t *testSystemAdapter) LastBatch(chainId string) *sb.Batch {
 	if len(t.batches[chainId]) == 0 {
 		return t.receivers[chainId].(*SBFT).makeBatch(0, nil, nil)
 	}
@@ -297,9 +298,9 @@ func newTestSystemWithBatchSize(n uint64, batchSize uint64) *testSystem {
 	return newTestSystemWithParams(n, batchSize, false)
 }
 
-func newTestSystemWOTimers(n uint64) *testSystem {
-	return newTestSystemWithParams(n, defaultMaxReqCount, true)
-}
+//func newTestSystemWOTimers(n uint64) *testSystem {
+//	return newTestSystemWithParams(n, defaultMaxReqCount, true)
+//}
 
 func newTestSystemWOTimersWithBatchSize(n uint64, batchSize uint64) *testSystem {
 	return newTestSystemWithParams(n, batchSize, true)

@@ -9,7 +9,7 @@
   "peers": [
 {
   "id": 0,
-  "address": ":7050",
+  "address": ":6101",
   "cert": "testdata/cert1.pem"
 }]
 }

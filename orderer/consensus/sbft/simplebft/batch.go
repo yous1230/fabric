@@ -18,30 +18,31 @@ package simplebft
 
 import (
 	"fmt"
-	"github.com/hyperledger/fabric/protos/utils"
 	"reflect"
 
 	"github.com/golang/protobuf/proto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+	"github.com/hyperledger/fabric/protos/utils"
 )
 
-func (s *SBFT) makeBatch(seq uint64, prevHash []byte, data [][]byte) *Batch {
+func (s *SBFT) makeBatch(seq uint64, prevHash []byte, data [][]byte) *sb.Batch {
 	//datahash := merkleHashData(data)
 
 	block := utils.UnmarshalBlockOrPanic(data[0])
-	batchhead := &BatchHeader{
+	batchhead := &sb.BatchHeader{
 		Seq:      seq,
 		PrevHash: prevHash,
 		DataHash: block.GetHeader().DataHash,
 	}
 	rawHeader := utils.MarshalOrPanic(batchhead)
-	return &Batch{
+	return &sb.Batch{
 		Header:   rawHeader,
 		Payloads: data,
 	}
 }
 
-func (s *SBFT) checkBatch(b *Batch, checkData bool, needSigs bool) (*BatchHeader, error) {
-	batchheader := &BatchHeader{}
+func (s *SBFT) checkBatch(b *sb.Batch, checkData bool, needSigs bool) (*sb.BatchHeader, error) {
+	batchheader := &sb.BatchHeader{}
 	err := proto.Unmarshal(b.Header, batchheader)
 	if err != nil {
 		return nil, err
@@ -74,48 +75,3 @@ func (s *SBFT) checkBatch(b *Batch, checkData bool, needSigs bool) (*BatchHeader
 
 	return batchheader, nil
 }
-
-////////////////////////////////////////
-
-// Hash returns the hash of the Batch.
-func (b *Batch) Hash() []byte {
-	return hash(b.Header)
-}
-
-func (b *Batch) DecodeHeader() *BatchHeader {
-	batchheader := &BatchHeader{}
-	err := proto.Unmarshal(b.Header, batchheader)
-	if err != nil {
-		panic(err)
-	}
-
-	return batchheader
-}
-
-//func (s *SBFT) getCommittersFromBatch(reqBatch *Batch) (bool, []filter.Committer) {
-//	reqs := make([]*Request, 0, len(reqBatch.Payloads))
-//	for _, pl := range reqBatch.Payloads {
-//		req := &Request{Payload: pl}
-//		reqs = append(reqs, req)
-//	}
-//	blocks := make([][]*Request, 0, 1)
-//	comms := [][]filter.Committer{}
-//	for _, r := range reqs {
-//		b, c, valid := s.sys.Validate(s.chainId, r)
-//		if !valid {
-//			return false, nil
-//		}
-//		blocks = append(blocks, b...)
-//		comms = append(comms, c...)
-//	}
-//	if len(blocks) > 1 || len(blocks) != len(comms) {
-//		return false, nil
-//	}
-//
-//	if len(blocks) == 0 {
-//		_, committer := s.sys.Cut(s.chainId)
-//		return true, committer
-//	} else {
-//		return true, comms[0]
-//	}
-//}

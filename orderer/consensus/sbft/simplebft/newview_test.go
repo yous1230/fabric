@@ -19,29 +19,31 @@ package simplebft
 import (
 	"reflect"
 	"testing"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 func TestXsetNoByz(t *testing.T) {
-	s := &SBFT{config: Config{N: 4, F: 1}, view: 3}
-	vcs := []*ViewChange{
-		&ViewChange{
+	s := &SBFT{config: sb.Config{N: 4, F: 1}, view: 3}
+	vcs := []*sb.ViewChange{
+		{
 			View: 3,
 			Pset: nil,
-			Qset: []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")},
-				&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Qset: []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")},
+				{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
-			Qset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View: 3,
-			Pset: []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset: []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")},
-				&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset: []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset: []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")},
+				{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
 	}
@@ -51,31 +53,31 @@ func TestXsetNoByz(t *testing.T) {
 		t.Fatal("no xset")
 	}
 
-	if !reflect.DeepEqual(xset, &Subject{&SeqView{3, 2}, []byte("val2")}) {
+	if !reflect.DeepEqual(xset, &sb.Subject{Seq: &sb.SeqView{View: 3, Seq: 2}, Digest: []byte("val2")}) {
 		t.Error(xset)
 	}
 }
 
 func TestXsetNoNew(t *testing.T) {
-	s := &SBFT{config: Config{N: 4, F: 1}, view: 3}
+	s := &SBFT{config: sb.Config{N: 4, F: 1}, view: 3}
 	prev := s.makeBatch(2, []byte("prev"), nil)
-	vcs := []*ViewChange{
-		&ViewChange{
+	vcs := []*sb.ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: prev,
 		},
-		&ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: prev,
 		},
-		&ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset:       []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: prev,
 		},
 	}
@@ -95,25 +97,25 @@ func TestXsetNoNew(t *testing.T) {
 }
 
 func TestXsetByz0(t *testing.T) {
-	s := &SBFT{config: Config{N: 4, F: 1}, view: 3}
-	vcs := []*ViewChange{
-		&ViewChange{
+	s := &SBFT{config: sb.Config{N: 4, F: 1}, view: 3}
+	vcs := []*sb.ViewChange{
+		{
 			View:       3,
 			Pset:       nil,
 			Qset:       nil,
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
-			Qset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View: 3,
-			Pset: []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset: []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")},
-				&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset: []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset: []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")},
+				{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
 	}
@@ -123,11 +125,11 @@ func TestXsetByz0(t *testing.T) {
 		t.Error("should not have received an xset")
 	}
 
-	vcs = append(vcs, &ViewChange{
+	vcs = append(vcs, &sb.ViewChange{
 		View: 3,
-		Pset: []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-		Qset: []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")},
-			&Subject{&SeqView{2, 2}, []byte("val2")}},
+		Pset: []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+		Qset: []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")},
+			{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 		Checkpoint: s.makeBatch(2, []byte("prev"), nil),
 	})
 
@@ -141,25 +143,25 @@ func TestXsetByz0(t *testing.T) {
 }
 
 func TestXsetByz2(t *testing.T) {
-	s := &SBFT{config: Config{N: 4, F: 1}, view: 3}
-	vcs := []*ViewChange{
-		&ViewChange{
+	s := &SBFT{config: sb.Config{N: 4, F: 1}, view: 3}
+	vcs := []*sb.ViewChange{
+		{
 			View:       3,
 			Pset:       nil,
-			Qset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View:       3,
-			Pset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
-			Qset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
+			Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
+			Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
-		&ViewChange{
+		{
 			View: 3,
-			Pset: []*Subject{&Subject{&SeqView{2, 2}, []byte("val2")}},
-			Qset: []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")},
-				&Subject{&SeqView{2, 2}, []byte("val2")}},
+			Pset: []*sb.Subject{{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
+			Qset: []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")},
+				{Seq: &sb.SeqView{View: 2, Seq: 2}, Digest: []byte("val2")}},
 			Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 		},
 	}
@@ -169,10 +171,10 @@ func TestXsetByz2(t *testing.T) {
 		t.Error("should not have received an xset")
 	}
 
-	vcs = append(vcs, &ViewChange{
+	vcs = append(vcs, &sb.ViewChange{
 		View:       3,
-		Pset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
-		Qset:       []*Subject{&Subject{&SeqView{1, 2}, []byte("val1")}},
+		Pset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
+		Qset:       []*sb.Subject{{Seq: &sb.SeqView{View: 1, Seq: 2}, Digest: []byte("val1")}},
 		Checkpoint: s.makeBatch(1, []byte("prev"), nil),
 	})
 
@@ -180,7 +182,7 @@ func TestXsetByz2(t *testing.T) {
 	if !ok {
 		t.Error("no xset")
 	}
-	if !reflect.DeepEqual(xset, &Subject{&SeqView{3, 2}, []byte("val1")}) {
+	if !reflect.DeepEqual(xset, &sb.Subject{Seq: &sb.SeqView{View: 3, Seq: 2}, Digest: []byte("val1")}) {
 		t.Error(xset)
 	}
 }

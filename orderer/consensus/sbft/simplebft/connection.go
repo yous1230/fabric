@@ -16,6 +16,10 @@ limitations under the License.
 
 package simplebft
 
+import (
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+)
+
 // Connection is an event from system to notify a new connection with
 // replica.
 // On connection, we send our latest (weak) checkpoint, and we expect
@@ -23,15 +27,15 @@ package simplebft
 func (s *SBFT) Connection(replica uint64) {
 	batch := *s.sys.LastBatch(s.chainId)
 	batch.Payloads = nil // don't send the big payload
-	hello := &Hello{Batch: &batch}
+	hello := &sb.Hello{Batch: &batch}
 	if s.isPrimary() && s.activeView && s.lastNewViewSent != nil {
 		hello.NewView = s.lastNewViewSent
 	}
-	s.sys.Send(s.chainId, &Msg{&Msg_Hello{hello}}, replica)
+	s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_Hello{Hello: hello}}, replica)
 
 	svc := s.replicaState[s.id].signedViewchange
 	if svc != nil {
-		s.sys.Send(s.chainId, &Msg{&Msg_ViewChange{svc}}, replica)
+		s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_ViewChange{ViewChange: svc}}, replica)
 	}
 
 	// A reconnecting replica can play forward its blockchain to
@@ -51,20 +55,20 @@ func (s *SBFT) Connection(replica uint64) {
 
 	if s.cur.subject.Seq.Seq > batchheader.Seq && s.activeView {
 		if s.isPrimary() {
-			s.sys.Send(s.chainId, &Msg{&Msg_Preprepare{s.cur.preprep}}, replica)
+			s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: s.cur.preprep}}, replica)
 		} else {
-			s.sys.Send(s.chainId, &Msg{&Msg_Prepare{&s.cur.subject}}, replica)
+			s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_Prepare{Prepare: &s.cur.subject}}, replica)
 		}
 		if s.cur.prepared {
-			s.sys.Send(s.chainId, &Msg{&Msg_Commit{&s.cur.subject}}, replica)
+			s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_Commit{Commit: &s.cur.subject}}, replica)
 		}
 		if s.cur.committed {
-			s.sys.Send(s.chainId, &Msg{&Msg_Checkpoint{s.makeCheckpoint()}}, replica)
+			s.sys.Send(s.chainId, &sb.Msg{Type: &sb.Msg_Checkpoint{Checkpoint: s.makeCheckpoint()}}, replica)
 		}
 	}
 }
 
-func (s *SBFT) handleHello(h *Hello, src uint64) {
+func (s *SBFT) handleHello(h *sb.Hello, src uint64) {
 	bh, err := s.checkBatch(h.Batch, false, true)
 	logger.Debugf("replica %d: got hello for blocks %d from replica %d", s.id, bh.Seq, src)
 

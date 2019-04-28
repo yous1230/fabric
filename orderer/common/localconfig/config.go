@@ -326,7 +326,7 @@ var Defaults = TopLevel{
 		},
 	},
 	SbftLocal: SbftLocal{
-		PeerCommAddr: ":7050",
+		PeerCommAddr: ":6101",
 		CertFile:     "sbft/testdata/cert1.pem",
 		KeyFile:      "sbft/testdata/key.pem",
 		DataDir:      "/tmp",

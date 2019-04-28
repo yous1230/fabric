@@ -37,8 +37,9 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
-	s "github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/hyperledger/fabric/protos/utils"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
@@ -55,7 +56,7 @@ var logger = logging.MustGetLogger("orderer.consensus.sbft.backend")
 type Backend struct {
 	conn        *connection.Manager
 	lock        sync.Mutex
-	peers       map[uint64]chan<- *s.MultiChainMsg
+	peers       map[uint64]chan<- *sb.MultiChainMsg
 	queue       chan Executable
 	persistence *persist.Persist
 
@@ -64,9 +65,9 @@ type Backend struct {
 	peerInfo map[string]*PeerInfo
 
 	// chainId to instance mapping
-	consensus   map[string]s.Receiver
+	consensus   map[string]simplebft.Receiver
 	bc          map[string]*blockCreator
-	lastBatches map[string]*s.Batch
+	lastBatches map[string]*sb.Batch
 	supports    map[string]consensus.ConsenterSupport
 }
 
@@ -101,12 +102,12 @@ func (pi peerInfoSlice) Swap(i, j int) {
 func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *persist.Persist) (*Backend, error) {
 	c := &Backend{
 		conn:        conn,
-		peers:       make(map[uint64]chan<- *s.MultiChainMsg),
+		peers:       make(map[uint64]chan<- *sb.MultiChainMsg),
 		peerInfo:    make(map[string]*PeerInfo),
 		supports:    make(map[string]consensus.ConsenterSupport),
-		consensus:   make(map[string]s.Receiver),
+		consensus:   make(map[string]simplebft.Receiver),
 		bc:          make(map[string]*blockCreator),
-		lastBatches: make(map[string]*s.Batch),
+		lastBatches: make(map[string]*sb.Batch),
 	}
 
 	var peerInfo []*PeerInfo
@@ -142,7 +143,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 		}
 		go c.connectWorker(peer)
 	}
-	RegisterConsensusServer(conn.Server, (*consensusConn)(c))
+	sb.RegisterConsensusServer(conn.Server, (*consensusConn)(c))
 	c.persistence = persist
 	c.queue = make(chan Executable)
 	go c.run()
@@ -184,8 +185,8 @@ func (b *Backend) connectWorker(peer *PeerInfo) {
 
 		ctx := context.TODO()
 
-		client := NewConsensusClient(conn)
-		consensus, err := client.Consensus(ctx, &Handshake{})
+		client := sb.NewConsensusClient(conn)
+		consensus, err := client.Consensus(ctx, &sb.Handshake{})
 		if err != nil {
 			logger.Warningf("could not establish consensus stream with replica %d (%s): %s", peer.id, peer.info, err)
 			continue
@@ -221,7 +222,7 @@ func (b *Backend) enqueueRequest(chainID string, request []byte) {
 	}()
 }
 
-func (b *Backend) enqueueForReceive(chainID string, msg *s.Msg, src uint64) {
+func (b *Backend) enqueueForReceive(chainID string, msg *sb.Msg, src uint64) {
 	go func() {
 		b.queue <- &msgEvent{chainId: chainID, msg: msg, src: src}
 	}()
@@ -244,12 +245,12 @@ func (b *Backend) run() {
 }
 
 // AddSbftPeer adds a new SBFT peer for the given chainId using the given support and configuration
-func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport, config *s.Config) (*s.SBFT, error) {
+func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport, config *sb.Config) (*simplebft.SBFT, error) {
 	b.supports[chainID] = support
-	return s.New(b.GetMyId(), chainID, config, b)
+	return simplebft.New(b.GetMyId(), chainID, config, b)
 }
 
-func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool) {
+func (b *Backend) Validate(chainID string, req *sb.Request) ([][]*sb.Request, bool) {
 	// ([][]*cb.Envelope, bool)
 	// If the message is a valid normal message and fills a batch, the batch, true is returned
 	// If the message is a valid special message (like a config message) it terminate the current batch
@@ -273,12 +274,12 @@ func (b *Backend) Validate(chainID string, req *s.Request) ([][]*s.Request, bool
 
 		if len(blocks) == 1 {
 			rb1 := toRequestBlock(blocks[0])
-			return [][]*s.Request{rb1}, true
+			return [][]*sb.Request{rb1}, true
 		}
 		if len(blocks) == 2 {
 			rb1 := toRequestBlock(blocks[0])
 			rb2 := toRequestBlock(blocks[1])
-			return [][]*s.Request{rb1, rb2}, true
+			return [][]*sb.Request{rb1, rb2}, true
 		}
 
 	}
@@ -338,26 +339,26 @@ func (b *Backend) ordered(chainID string, payload *cb.Envelope) (batches [][]*cb
 	return batches, pending, nil
 }
 
-func (b *Backend) Cut(chainID string) []*s.Request {
+func (b *Backend) Cut(chainID string) []*sb.Request {
 	envBatch := b.supports[chainID].BlockCutter().Cut()
 	block := b.bc[chainID].createNextBlock(envBatch)
 	return toRequestBlock(block)
 }
 
-func toRequestBlock(block *cb.Block) []*s.Request {
-	rqs := make([]*s.Request, 0, 1)
+func toRequestBlock(block *cb.Block) []*sb.Request {
+	rqs := make([]*sb.Request, 0, 1)
 	requestBytes, err := utils.Marshal(block)
 	if err != nil {
 		logger.Panicf("Cannot marshal envelope: %s", err)
 	}
-	rq := &s.Request{Payload: requestBytes}
+	rq := &sb.Request{Payload: requestBytes}
 	rqs = append(rqs, rq)
 
 	return rqs
 }
 
 // Consensus implements the SBFT consensus gRPC interface
-func (c *consensusConn) Consensus(_ *Handshake, srv Consensus_ConsensusServer) error {
+func (c *consensusConn) Consensus(_ *sb.Handshake, srv sb.Consensus_ConsensusServer) error {
 	pi := connection.GetPeerInfo(srv)
 	peer, ok := c.peerInfo[pi.Fingerprint()]
 
@@ -367,7 +368,7 @@ func (c *consensusConn) Consensus(_ *Handshake, srv Consensus_ConsensusServer) e
 	}
 	logger.Infof("connection from replica %d (%s)", peer.id, pi)
 
-	ch := make(chan *s.MultiChainMsg)
+	ch := make(chan *sb.MultiChainMsg)
 	c.lock.Lock()
 	if oldCh, ok := c.peers[peer.id]; ok {
 		logger.Debugf("replacing connection from replica %d", peer.id)
@@ -396,7 +397,7 @@ func (c *consensusConn) Consensus(_ *Handshake, srv Consensus_ConsensusServer) e
 }
 
 // Unicast sends to all external SBFT peers
-func (b *Backend) Broadcast(msg *s.MultiChainMsg) error {
+func (b *Backend) Broadcast(msg *sb.MultiChainMsg) error {
 	b.lock.Lock()
 	for _, ch := range b.peers {
 		ch <- msg
@@ -406,7 +407,7 @@ func (b *Backend) Broadcast(msg *s.MultiChainMsg) error {
 }
 
 // Unicast sends to a specific external SBFT peer identified by chainId and dest
-func (b *Backend) Unicast(chainID string, msg *s.Msg, dest uint64) error {
+func (b *Backend) Unicast(chainID string, msg *sb.Msg, dest uint64) error {
 	b.lock.Lock()
 	ch, ok := b.peers[dest]
 	b.lock.Unlock()
@@ -416,23 +417,23 @@ func (b *Backend) Unicast(chainID string, msg *s.Msg, dest uint64) error {
 		logger.Debug(err)
 		return err
 	}
-	ch <- &s.MultiChainMsg{Msg: msg, ChainID: chainID}
+	ch <- &sb.MultiChainMsg{Msg: msg, ChainID: chainID}
 	return nil
 }
 
 // AddReceiver adds a receiver instance for a given chainId
-func (b *Backend) AddReceiver(chainId string, recv s.Receiver) {
+func (b *Backend) AddReceiver(chainId string, recv simplebft.Receiver) {
 	b.consensus[chainId] = recv
 	block := b.supports[chainId].Block(b.supports[chainId].Height() - 1)
 	b.bc[chainId] = &blockCreator{
 		hash:   block.Header.Hash(),
 		number: block.Header.Number,
 	}
-	b.lastBatches[chainId] = &s.Batch{Header: nil, Signatures: nil, Payloads: [][]byte{}}
+	b.lastBatches[chainId] = &sb.Batch{Header: nil, Signatures: nil, Payloads: [][]byte{}}
 }
 
 // Send sends to a specific SBFT peer identified by chainId and dest
-func (b *Backend) Send(chainID string, msg *s.Msg, dest uint64) {
+func (b *Backend) Send(chainID string, msg *sb.Msg, dest uint64) {
 	if dest == b.self.id {
 		b.enqueueForReceive(chainID, msg, b.self.id)
 		return
@@ -441,14 +442,14 @@ func (b *Backend) Send(chainID string, msg *s.Msg, dest uint64) {
 }
 
 // Timer starts a timer
-func (b *Backend) Timer(d time.Duration, tf func()) s.Canceller {
+func (b *Backend) Timer(d time.Duration, tf func()) simplebft.Canceller {
 	tm := &Timer{tf: tf, execute: true}
 	b.initTimer(tm, d)
 	return tm
 }
 
 // Deliver writes a block
-func (b *Backend) Deliver(chainId string, batch *s.Batch) {
+func (b *Backend) Deliver(chainId string, batch *sb.Batch) {
 	//blockContents := make([]*cb.Envelope, 0, len(batch.Payloads))
 	//for _, p := range batch.Payloads {
 	//	envelope := &cb.Envelope{}
@@ -504,7 +505,7 @@ func (b *Backend) Restore(chainId string, key string, out proto.Message) bool {
 }
 
 // LastBatch returns the last batch for a given chain identified by its ID
-func (b *Backend) LastBatch(chainId string) *s.Batch {
+func (b *Backend) LastBatch(chainId string) *sb.Batch {
 	return b.lastBatches[chainId]
 }
 

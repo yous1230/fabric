@@ -17,16 +17,15 @@ limitations under the License.
 package simplebft
 
 import (
+	"fmt"
+	"math"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
-	"math"
-
-	"fmt"
-	"strconv"
-
 	"github.com/golang/protobuf/proto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/op/go-logging"
 )
 
@@ -98,7 +97,7 @@ func TestMultiChain(t *testing.T) {
 		a := sys.NewAdapter(i)
 		for j := uint64(0); j < M; j++ {
 			chainId := fmt.Sprintf("%d", j)
-			s, err := New(i, chainId, &Config{N: N, F: 0, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+			s, err := New(i, chainId, &sb.Config{N: N, F: 0, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -144,7 +143,7 @@ func TestSBFT(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +177,7 @@ func TestQuorumSizes(t *testing.T) {
 		for f := uint64(0); f <= uint64(math.Floor(float64(N-1)/float64(3))); f++ {
 			sys := newTestSystem(N)
 			a := sys.NewAdapter(0)
-			s, err := New(0, chainId, &Config{N: N, F: f, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+			s, err := New(0, chainId, &sb.Config{N: N, F: f, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -220,7 +219,7 @@ func TestSBFTDelayed(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -262,7 +261,7 @@ func TestN1(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 0, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 0, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -291,7 +290,7 @@ func TestMonotonicViews(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -305,7 +304,7 @@ func TestMonotonicViews(t *testing.T) {
 	view := repls[0].view
 	testLog.Notice("TEST: Replica 0 is in view ", view)
 	testLog.Notice("TEST: restarting replica 0")
-	repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+	repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 	for _, a := range adapters {
 		if a.id != 0 {
 			a.receivers[chainId].Connection(0)
@@ -327,7 +326,7 @@ func TestByzPrimaryN4(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -347,12 +346,12 @@ func TestByzPrimaryN4(t *testing.T) {
 				batch.Payloads = [][]byte{r2}
 				pp.Batch = &batch
 				h := merkleHashData(batch.Payloads)
-				bh := &BatchHeader{}
+				bh := &sb.BatchHeader{}
 				proto.Unmarshal(pp.Batch.Header, bh)
 				bh.DataHash = h
 				bhraw, _ := proto.Marshal(bh)
 				pp.Batch.Header = bhraw
-				msg.msg = &Msg{&Msg_Preprepare{&pp}}
+				msg.msg = &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: &pp}}
 			}
 		}
 		return e, true
@@ -382,7 +381,7 @@ func TestNewPrimaryHandlingViewChange(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 2, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 2, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -402,12 +401,12 @@ func TestNewPrimaryHandlingViewChange(t *testing.T) {
 				batch.Payloads = [][]byte{r2}
 				pp.Batch = &batch
 				h := merkleHashData(batch.Payloads)
-				bh := &BatchHeader{}
+				bh := &sb.BatchHeader{}
 				proto.Unmarshal(pp.Batch.Header, bh)
 				bh.DataHash = h
 				bhraw, _ := proto.Marshal(bh)
 				pp.Batch.Header = bhraw
-				msg.msg = &Msg{&Msg_Preprepare{&pp}}
+				msg.msg = &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: &pp}}
 			}
 		}
 		return e, true
@@ -434,7 +433,7 @@ func TestByzPrimaryBullyingSingleReplica(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -454,12 +453,12 @@ func TestByzPrimaryBullyingSingleReplica(t *testing.T) {
 				batch.Payloads = [][]byte{r2}
 				pp.Batch = &batch
 				h := merkleHashData(batch.Payloads)
-				bh := &BatchHeader{}
+				bh := &sb.BatchHeader{}
 				proto.Unmarshal(pp.Batch.Header, bh)
 				bh.DataHash = h
 				bhraw, _ := proto.Marshal(bh)
 				pp.Batch.Header = bhraw
-				msg.msg = &Msg{&Msg_Preprepare{&pp}}
+				msg.msg = &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: &pp}}
 			}
 		}
 		return e, true
@@ -483,7 +482,7 @@ func TestViewChange(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -523,7 +522,7 @@ func TestMsgReordering(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -545,7 +544,7 @@ func TestMsgReordering(t *testing.T) {
 				}
 				d := msg.msg.GetCheckpoint()
 				if d != nil {
-					msg.msg = &Msg{&Msg_Preprepare{preprep.msg.GetPreprepare()}}
+					msg.msg = &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: preprep.msg.GetPreprepare()}}
 					return e, true //and delivering it
 				}
 				return e, false //droping other msgs from 0 to 1
@@ -576,7 +575,7 @@ func TestBacklogReordering(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -598,7 +597,7 @@ func TestBacklogReordering(t *testing.T) {
 				}
 				d := msg.msg.GetCheckpoint()
 				if d != nil {
-					msg.msg = &Msg{&Msg_Preprepare{preprep.msg.GetPreprepare()}}
+					msg.msg = &sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: preprep.msg.GetPreprepare()}}
 					return e, true //and delivering it
 				}
 				return e, true //letting prepare and commit from 0 to 1 pass
@@ -629,7 +628,7 @@ func TestViewChangeWithRetransmission(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -669,7 +668,7 @@ func TestViewChangeXset(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 1, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -746,7 +745,7 @@ func TestRestart(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -766,7 +765,7 @@ func TestRestart(t *testing.T) {
 	sys.Run()
 
 	testLog.Notice("restarting 0")
-	repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+	repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 	for _, a := range adapters {
 		if a.id != 0 {
 			a.receivers[chainId].Connection(0)
@@ -800,7 +799,7 @@ func TestAbdicatingPrimary(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -859,7 +858,7 @@ func TestRestartAfterPrepare(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -879,7 +878,7 @@ func TestRestartAfterPrepare(t *testing.T) {
 			if p := msg.msg.GetPrepare(); p != nil && p.Seq.Seq == 3 && !restarted {
 				restarted = true
 				testLog.Notice("restarting 0")
-				repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+				repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 				for _, a := range adapters {
 					if a.id != 0 {
 						a.receivers[chainId].Connection(0)
@@ -929,7 +928,7 @@ func TestRestartAfterCommit(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -949,7 +948,7 @@ func TestRestartAfterCommit(t *testing.T) {
 			if c := msg.msg.GetCommit(); c != nil && c.Seq.Seq == 3 && !restarted {
 				restarted = true
 				testLog.Notice("restarting 0")
-				repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+				repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 				for _, a := range adapters {
 					if a.id != 0 {
 						a.receivers[chainId].Connection(0)
@@ -999,7 +998,7 @@ func TestRestartAfterCheckpoint(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1019,7 +1018,7 @@ func TestRestartAfterCheckpoint(t *testing.T) {
 			if c := msg.msg.GetCheckpoint(); c != nil && c.Seq == 3 && !restarted {
 				restarted = true
 				testLog.Notice("restarting 0")
-				repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+				repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 				for _, a := range adapters {
 					if a.id != 0 {
 						a.receivers[chainId].Connection(0)
@@ -1069,7 +1068,7 @@ func TestErroneousViewChange(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1089,7 +1088,7 @@ func TestErroneousViewChange(t *testing.T) {
 			if c := msg.msg.GetCheckpoint(); c != nil && c.Seq == 3 && !restarted {
 				restarted = true
 				testLog.Notice("restarting 0")
-				repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+				repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 				for _, a := range adapters {
 					if a.id != 0 {
 						a.receivers[chainId].Connection(0)
@@ -1159,7 +1158,7 @@ func TestRestartMissedViewChange(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1201,7 +1200,7 @@ func TestRestartMissedViewChange(t *testing.T) {
 
 	disconnect = false
 	testLog.Notice("restarting 0")
-	repls[0], _ = New(0, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
+	repls[0], _ = New(0, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, adapters[0])
 	for _, a := range adapters {
 		if a.id != 0 {
 			a.receivers[chainId].Connection(0)
@@ -1234,7 +1233,7 @@ func TestFullBacklog(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1246,7 +1245,7 @@ func TestFullBacklog(t *testing.T) {
 
 	connectAllForDefaultChain(sys)
 	sys.enqueue(200*time.Millisecond, &testTimer{id: 999, tf: func() {
-		repls[0].sys.Send(chainId, &Msg{&Msg_Prepare{&Subject{Seq: &SeqView{Seq: 100}}}}, 1)
+		repls[0].sys.Send(chainId, &sb.Msg{Type: &sb.Msg_Prepare{Prepare: &sb.Subject{Seq: &sb.SeqView{Seq: 100}}}}, 1)
 	}})
 	for i := 0; i < 10; i++ {
 		sys.enqueue(time.Duration(i)*100*time.Millisecond, &testTimer{id: 999, tf: func() {
@@ -1277,7 +1276,7 @@ func TestHelloMsg(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: uint64(BS), RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: uint64(BS), RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1313,7 +1312,7 @@ func TestHelloMsg(t *testing.T) {
 	phase = 2 //start delivering msgs to replica 1
 
 	testLog.Notice("restarting replica 1")
-	repls[1], _ = New(1, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, adapters[1])
+	repls[1], _ = New(1, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: BS, RequestTimeoutNsec: 20000000000}, adapters[1])
 	for _, a := range adapters {
 		if a.id != 1 {
 			a.receivers[chainId].Connection(1)
@@ -1344,7 +1343,7 @@ func TestViewChangeTimer(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1428,7 +1427,7 @@ func TestResendViewChange(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 1, BatchDurationNsec: 2000000000, BatchSizeBytes: 10, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1489,7 +1488,7 @@ func TestTenReplicasBombedWithRequests(t *testing.T) {
 	var adapters []*testSystemAdapter
 	for i := uint64(0); i < N; i++ {
 		a := sys.NewAdapter(i)
-		s, err := New(i, chainId, &Config{N: N, F: 3, BatchDurationNsec: 2000000000, BatchSizeBytes: 3, RequestTimeoutNsec: 20000000000}, a)
+		s, err := New(i, chainId, &sb.Config{N: N, F: 3, BatchDurationNsec: 2000000000, BatchSizeBytes: 3, RequestTimeoutNsec: 20000000000}, a)
 		if err != nil {
 			t.Fatal(err)
 		}

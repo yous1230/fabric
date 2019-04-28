@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/op/go-logging"
 )
 
@@ -33,7 +34,7 @@ const viewchange string = "viewchange"
 
 // Receiver defines the API that is exposed by SBFT to the system.
 type Receiver interface {
-	Receive(msg *Msg, src uint64)
+	Receive(msg *sb.Msg, src uint64)
 	Request(req []byte)
 	Connection(replica uint64)
 	GetChainId() string
@@ -41,18 +42,18 @@ type Receiver interface {
 
 // System defines the API that needs to be provided for SBFT.
 type System interface {
-	Send(chainId string, msg *Msg, dest uint64)
+	Send(chainId string, msg *sb.Msg, dest uint64)
 	Timer(d time.Duration, f func()) Canceller
-	Deliver(chainId string, batch *Batch)
+	Deliver(chainId string, batch *sb.Batch)
 	AddReceiver(chainId string, receiver Receiver)
 	Persist(chainId string, key string, data proto.Message)
 	Restore(chainId string, key string, out proto.Message) bool
-	LastBatch(chainId string) *Batch
+	LastBatch(chainId string) *sb.Batch
 	Sign(data []byte) []byte
 	CheckSig(data []byte, src uint64, sig []byte) error
 	Reconnect(chainId string, replica uint64)
-	Validate(chainID string, req *Request) ([][]*Request, bool)
-	Cut(chainID string) []*Request
+	Validate(chainID string, req *sb.Request) ([][]*sb.Request, bool)
+	Cut(chainID string) []*sb.Request
 }
 
 // Canceller allows cancelling of a scheduled timer event.
@@ -64,30 +65,30 @@ type Canceller interface {
 type SBFT struct {
 	sys System
 
-	config            Config
+	config            sb.Config
 	id                uint64
 	view              uint64
-	blocks            [][]*Request
+	blocks            [][]*sb.Request
 	batchTimer        Canceller
 	cur               reqInfo
 	activeView        bool
-	lastNewViewSent   *NewView
+	lastNewViewSent   *sb.NewView
 	viewChangeTimeout time.Duration
 	viewChangeTimer   Canceller
 	replicaState      []replicaInfo
-	pending           map[string]*Request
+	pending           map[string]*sb.Request
 	validated         map[string]bool
 	chainId           string
 	//primarycommitters [][]filter.Committer
 }
 
 type reqInfo struct {
-	subject        Subject
+	subject        sb.Subject
 	timeout        Canceller
-	preprep        *Preprepare
-	prep           map[uint64]*Subject
-	commit         map[uint64]*Subject
-	checkpoint     map[uint64]*Checkpoint
+	preprep        *sb.Preprepare
+	prep           map[uint64]*sb.Subject
+	commit         map[uint64]*sb.Subject
+	checkpoint     map[uint64]*sb.Checkpoint
 	prepared       bool
 	committed      bool
 	checkpointDone bool
@@ -95,10 +96,10 @@ type reqInfo struct {
 }
 
 type replicaInfo struct {
-	backLog          []*Msg
-	hello            *Hello
-	signedViewchange *Signed
-	viewchange       *ViewChange
+	backLog          []*sb.Msg
+	hello            *sb.Hello
+	signedViewchange *sb.Signed
+	viewchange       *sb.ViewChange
 }
 
 var logger = logging.MustGetLogger("orderer.consensus.sbft.simplebft")
@@ -108,7 +109,7 @@ type dummyCanceller struct{}
 func (d dummyCanceller) Cancel() {}
 
 // New creates a new SBFT instance.
-func New(id uint64, chainID string, config *Config, sys System) (*SBFT, error) {
+func New(id uint64, chainID string, config *sb.Config, sys System) (*SBFT, error) {
 	if config.F*3+1 > config.N {
 		return nil, fmt.Errorf("invalid combination of N (%d) and F (%d)", config.N, config.F)
 	}
@@ -120,24 +121,24 @@ func New(id uint64, chainID string, config *Config, sys System) (*SBFT, error) {
 		chainId:         chainID,
 		viewChangeTimer: dummyCanceller{},
 		replicaState:    make([]replicaInfo, config.N),
-		pending:         make(map[string]*Request),
+		pending:         make(map[string]*sb.Request),
 		validated:       make(map[string]bool),
-		blocks:          make([][]*Request, 0, 3),
+		blocks:          make([][]*sb.Request, 0, 3),
 		//primarycommitters: make([][]filter.Committer, 0),
 	}
 	s.sys.AddReceiver(chainID, s)
 
 	s.view = 0
-	s.cur.subject.Seq = &SeqView{}
+	s.cur.subject.Seq = &sb.SeqView{}
 	s.cur.prepared = true
 	s.cur.committed = true
 	s.cur.checkpointDone = true
 	s.cur.timeout = dummyCanceller{}
 	s.activeView = true
 
-	svc := &Signed{}
+	svc := &sb.Signed{}
 	if s.sys.Restore(s.chainId, viewchange, svc) {
-		vc := &ViewChange{}
+		vc := &sb.ViewChange{}
 		err := proto.Unmarshal(svc.Data, vc)
 		if err != nil {
 			return nil, err
@@ -148,7 +149,7 @@ func New(id uint64, chainID string, config *Config, sys System) (*SBFT, error) {
 		s.activeView = false
 	}
 
-	pp := &Preprepare{}
+	pp := &sb.Preprepare{}
 	if s.sys.Restore(s.chainId, preprepared, pp) && pp.Seq.View >= s.view {
 		s.view = pp.Seq.View
 		s.activeView = true
@@ -158,11 +159,11 @@ func New(id uint64, chainID string, config *Config, sys System) (*SBFT, error) {
 			s.acceptPreprepare(pp)
 		}
 	}
-	c := &Subject{}
+	c := &sb.Subject{}
 	if s.sys.Restore(s.chainId, prepared, c) && reflect.DeepEqual(c, &s.cur.subject) && c.Seq.View >= s.view {
 		s.cur.prepared = true
 	}
-	ex := &Subject{}
+	ex := &sb.Subject{}
 	if s.sys.Restore(s.chainId, committed, ex) && reflect.DeepEqual(c, &s.cur.subject) && ex.Seq.View >= s.view {
 		s.cur.committed = true
 	}
@@ -193,8 +194,8 @@ func (s *SBFT) seq() uint64 {
 	return s.sys.LastBatch(s.chainId).DecodeHeader().Seq
 }
 
-func (s *SBFT) nextSeq() SeqView {
-	return SeqView{Seq: s.seq() + 1, View: s.view}
+func (s *SBFT) nextSeq() sb.SeqView {
+	return sb.SeqView{Seq: s.seq() + 1, View: s.view}
 }
 
 func (s *SBFT) nextView() uint64 {
@@ -219,7 +220,7 @@ func (s *SBFT) oneCorrectQuorum() int {
 	return int(s.config.F + 1)
 }
 
-func (s *SBFT) broadcast(m *Msg) {
+func (s *SBFT) broadcast(m *sb.Msg) {
 	for i := uint64(0); i < s.config.N; i++ {
 		s.sys.Send(s.chainId, m, i)
 	}
@@ -228,7 +229,7 @@ func (s *SBFT) broadcast(m *Msg) {
 ////////////////////////////////////////////////
 
 // Receive is the ingress method for SBFT messages.
-func (s *SBFT) Receive(m *Msg, src uint64) {
+func (s *SBFT) Receive(m *sb.Msg, src uint64) {
 	logger.Debugf("replica %d: received message from %d: %s", s.id, src, m.Type)
 
 	if h := m.GetHello(); h != nil {
@@ -254,7 +255,7 @@ func (s *SBFT) Receive(m *Msg, src uint64) {
 	s.handleQueueableMessage(m, src)
 }
 
-func (s *SBFT) handleQueueableMessage(m *Msg, src uint64) {
+func (s *SBFT) handleQueueableMessage(m *sb.Msg, src uint64) {
 	if pp := m.GetPreprepare(); pp != nil {
 		s.handlePreprepare(pp, src)
 		return
@@ -272,7 +273,7 @@ func (s *SBFT) handleQueueableMessage(m *Msg, src uint64) {
 	logger.Warningf("replica %d: received invalid message from %d", s.id, src)
 }
 
-func (s *SBFT) deliverBatch(batch *Batch) {
+func (s *SBFT) deliverBatch(batch *sb.Batch) {
 	//if committers == nil {
 	//	logger.Warningf("replica %d: commiter is nil", s.id)
 	//	panic("Committer is nil.")

@@ -18,13 +18,15 @@ package simplebft
 
 import (
 	"fmt"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 const maxBacklogSeq = 4
 const msgPerSeq = 3 // (pre)prepare, commit, checkpoint
 
-func (s *SBFT) testBacklogMessage(m *Msg, src uint64) bool {
-	test := func(seq *SeqView) bool {
+func (s *SBFT) testBacklogMessage(m *sb.Msg, src uint64) bool {
+	test := func(seq *sb.SeqView) bool {
 		if !s.activeView {
 			return true
 		}
@@ -41,12 +43,12 @@ func (s *SBFT) testBacklogMessage(m *Msg, src uint64) bool {
 	} else if c := m.GetCommit(); c != nil {
 		return test(c.Seq)
 	} else if chk := m.GetCheckpoint(); chk != nil {
-		return test(&SeqView{Seq: chk.Seq})
+		return test(&sb.SeqView{Seq: chk.Seq})
 	}
 	return false
 }
 
-func (s *SBFT) recordBacklogMsg(m *Msg, src uint64) {
+func (s *SBFT) recordBacklogMsg(m *sb.Msg, src uint64) {
 	if src == s.id {
 		panic(fmt.Sprintf("should never have to backlog my own message (replica ID: %d)", src))
 	}

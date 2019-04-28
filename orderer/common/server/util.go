@@ -11,17 +11,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger/fabric/orderer/consensus/sbft"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
-	sbftcrypto "github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
-
 	"github.com/hyperledger/fabric/common/ledger/blkstorage/fsblkstorage"
 	"github.com/hyperledger/fabric/common/ledger/blockledger"
 	"github.com/hyperledger/fabric/common/ledger/blockledger/file"
 	"github.com/hyperledger/fabric/common/ledger/blockledger/json"
 	"github.com/hyperledger/fabric/common/ledger/blockledger/ram"
 	config "github.com/hyperledger/fabric/orderer/common/localconfig"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
+	sbftcrypto "github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 func createLedgerFactory(conf *config.TopLevel) (blockledger.Factory, string) {
@@ -80,8 +78,8 @@ func createSubDir(parentDirPath string, subDir string) (string, bool) {
 }
 
 // XXX The functions below need to be moved to the SBFT package ASAP
-func makeSbftConsensusConfig(conf *config.TopLevel) *sbft.ConsensusConfig {
-	cfg := simplebft.Config{N: conf.Genesis.SbftShared.N, F: conf.Genesis.SbftShared.F,
+func makeSbftConsensusConfig(conf *config.TopLevel) *sb.ConsensusConfig {
+	cfg := sb.Config{N: conf.Genesis.SbftShared.N, F: conf.Genesis.SbftShared.F,
 		BatchDurationNsec:  uint64(conf.Genesis.DeprecatedBatchTimeout),
 		BatchSizeBytes:     uint64(conf.Genesis.DeprecatedBatchSize),
 		RequestTimeoutNsec: conf.Genesis.SbftShared.RequestTimeoutNsec}
@@ -93,7 +91,7 @@ func makeSbftConsensusConfig(conf *config.TopLevel) *sbft.ConsensusConfig {
 			logger.Error("MakeSbftConsensusConfig failed:", err)
 		}
 	}
-	return &sbft.ConsensusConfig{Consensus: &cfg, Peers: peers}
+	return &sb.ConsensusConfig{Consensus: &cfg, Peers: peers}
 }
 
 func makeSbftStackConfig(conf *config.TopLevel) *backend.StackConfig {

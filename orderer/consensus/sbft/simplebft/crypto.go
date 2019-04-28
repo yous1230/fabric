@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 
 	"github.com/golang/protobuf/proto"
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 func hash2str(h []byte) string {
@@ -69,16 +70,16 @@ func merkleHashDigests(digests [][]byte) []byte {
 
 ////////////////////////////////////////////////
 
-func (s *SBFT) sign(msg proto.Message) *Signed {
+func (s *SBFT) sign(msg proto.Message) *sb.Signed {
 	bytes, err := proto.Marshal(msg)
 	if err != nil {
 		panic(err)
 	}
 	sig := s.sys.Sign(bytes)
-	return &Signed{Data: bytes, Signature: []byte(sig)}
+	return &sb.Signed{Data: bytes, Signature: []byte(sig)}
 }
 
-func (s *SBFT) checkSig(sig *Signed, signer uint64, msg proto.Message) error {
+func (s *SBFT) checkSig(sig *sb.Signed, signer uint64, msg proto.Message) error {
 	err := s.checkBytesSig(sig.Data, signer, sig.Signature)
 	if err != nil {
 		return err

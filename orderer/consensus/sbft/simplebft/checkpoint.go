@@ -19,11 +19,13 @@ package simplebft
 import (
 	"fmt"
 	"reflect"
+
+	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
-func (s *SBFT) makeCheckpoint() *Checkpoint {
+func (s *SBFT) makeCheckpoint() *sb.Checkpoint {
 	sig := s.sys.Sign(s.cur.subject.Digest)
-	c := &Checkpoint{
+	c := &sb.Checkpoint{
 		Seq:       s.cur.subject.Seq.Seq,
 		Digest:    s.cur.subject.Digest,
 		Signature: sig,
@@ -32,10 +34,10 @@ func (s *SBFT) makeCheckpoint() *Checkpoint {
 }
 
 func (s *SBFT) sendCheckpoint() {
-	s.broadcast(&Msg{&Msg_Checkpoint{s.makeCheckpoint()}})
+	s.broadcast(&sb.Msg{Type: &sb.Msg_Checkpoint{Checkpoint: s.makeCheckpoint()}})
 }
 
-func (s *SBFT) handleCheckpoint(c *Checkpoint, src uint64) {
+func (s *SBFT) handleCheckpoint(c *sb.Checkpoint, src uint64) {
 	if s.cur.checkpointDone {
 		return
 	}

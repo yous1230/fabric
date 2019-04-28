@@ -17,7 +17,7 @@ limitations under the License.
 package backend
 
 import (
-	s "github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
+	"github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
 type Timer struct {
@@ -41,7 +41,7 @@ func (t *Timer) Execute(backend *Backend) {
 
 type msgEvent struct {
 	chainId string
-	msg     *s.Msg
+	msg     *sbft.Msg
 	src     uint64
 }
 
