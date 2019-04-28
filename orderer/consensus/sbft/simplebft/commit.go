@@ -17,8 +17,7 @@ limitations under the License.
 package simplebft
 
 import (
-	"reflect"
-
+	"github.com/golang/protobuf/proto"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
@@ -43,7 +42,7 @@ func (s *SBFT) handleCommit(c *sb.Subject, src uint64) {
 		return
 	}
 
-	if !reflect.DeepEqual(c, &s.cur.subject) {
+	if !proto.Equal(c, &s.cur.subject) {
 		logger.Warningf("replica %d: commit does not match expected subject %v %x, got %v %x",
 			s.id, s.cur.subject.Seq, s.cur.subject.Digest, c.Seq, c.Digest)
 		return
