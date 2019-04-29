@@ -17,6 +17,7 @@ limitations under the License.
 package sbft
 
 import (
+	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
@@ -26,6 +27,7 @@ import (
 	cb "github.com/hyperledger/fabric/protos/common"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 )
 
 type consensusStack struct {
@@ -58,26 +60,19 @@ func New(c *sb.ConsensusConfig, sc *backend.StackConfig) consensus.Consenter {
 }
 
 func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
-	return newChain(sbft, support), nil
+	return newChain(sbft, support)
 }
 
-func newChain(sbft *consenter, support consensus.ConsenterSupport) *chain {
+func newChain(sbft *consenter, support consensus.ConsenterSupport) (*chain, error) {
 	logger.Infof("Starting a chain: %d", support.ChainID())
 
-	//m := &sbft.ConfigMetadata{}
-	//if err := proto.Unmarshal(support.SharedConfig().ConsensusMetadata(), m); err != nil {
-	//	return nil, errors.Wrap(err, "failed to unmarshal consensus metadata")
-	//}
-	//
-	//if support.SharedConfig().Capabilities().Kafka2RaftMigration() &&
-	//	support.SharedConfig().ConsensusMigrationState() != orderer.ConsensusType_MIG_STATE_NONE {
-	//	c.Logger.Debugf("SharedConfig().ConsensusMetadata(): %s", m.String())
-	//	c.Logger.Debugf("block metadata.Value dump: \n%s", hex.Dump(metadata.Value))
-	//}
-	//
-	//if m.Options == nil {
-	//	return nil, errors.New("etcdraft options have not been provided")
-	//}
+	m := &sb.ConfigMetadata{}
+	if err := proto.Unmarshal(support.SharedConfig().ConsensusMetadata(), m); err != nil {
+		return nil, errors.Wrap(err, "Failed to unmarshal consensus metadata")
+	}
+	if m.Options == nil {
+		return nil, errors.New("Sbft options have not been provided")
+	}
 
 	if sbft.sbftPeers == nil {
 		sbft.consensusStack = createConsensusStack(sbft)
@@ -90,11 +85,11 @@ func newChain(sbft *consenter, support consensus.ConsenterSupport) *chain {
 		exitChan:        make(chan struct{}),
 		consensusStack:  sbft.consensusStack,
 		migrationStatus: migration.NewStatusStepper(support.IsSystemChannel(), support.ChainID()), // Needed by consensus-type migration
-	}
+	}, nil
 }
 
 func createConsensusStack(sbft *consenter) *consensusStack {
-	logger.Infof("%v    %v      %v", sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
+	logger.Infof("%v %v %v", sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
 	conn, err := connection.New(sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
 	if err != nil {
 		logger.Errorf("Error when trying to connect: %s", err)

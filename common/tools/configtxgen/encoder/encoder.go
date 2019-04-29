@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package encoder
 
 import (
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/cauthdsl"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/crypto"
@@ -19,10 +20,9 @@ import (
 	"github.com/hyperledger/fabric/msp"
 	cb "github.com/hyperledger/fabric/protos/common"
 	"github.com/hyperledger/fabric/protos/orderer/etcdraft"
+	"github.com/hyperledger/fabric/protos/orderer/sbft"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"github.com/hyperledger/fabric/protos/utils"
-
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
@@ -218,6 +218,9 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 	switch conf.OrdererType {
 	case ConsensusTypeSolo:
 	case ConsensusTypeSbft:
+		if consensusMetadata, err = sbft.Marshal(conf.Sbft); err != nil {
+			return nil, errors.Errorf("cannot marshal metadata for orderer type %s: %v", ConsensusTypeSbft, err)
+		}
 	case ConsensusTypeKafka:
 		addValue(ordererGroup, channelconfig.KafkaBrokersValue(conf.Kafka.Brokers), channelconfig.AdminsPolicyKey)
 	case etcdraft.TypeKey:

@@ -204,7 +204,7 @@ var genesisDefaults = TopLevel{
 			},
 		},
 		Sbft: &sbft.ConfigMetadata{
-			Options: &sbft.SbftShared{
+			Options: &sbft.Options{
 				N:                  1,
 				F:                  0,
 				RequestTimeoutNsec: 1000000000,
@@ -410,10 +410,6 @@ loop:
 			case ord.Sbft.Options.N == 0:
 				logger.Infof("Orderer.Sbft.SbftShared.N unset, setting to %v", genesisDefaults.Orderer.Sbft.Options.N)
 				ord.Sbft.Options.N = genesisDefaults.Orderer.Sbft.Options.N
-
-			case ord.Sbft.Options.F == 0:
-				logger.Infof("Orderer.Sbft.SbftShared.F unset, setting to %v", genesisDefaults.Orderer.Sbft.Options.F)
-				ord.Sbft.Options.F = genesisDefaults.Orderer.Sbft.Options.F
 
 			case ord.Sbft.Options.RequestTimeoutNsec == 0:
 				logger.Infof("Orderer.EtcdRaft.SbftShared.RequestTimeoutNsec unset, setting to %v", genesisDefaults.Orderer.Sbft.Options.RequestTimeoutNsec)
