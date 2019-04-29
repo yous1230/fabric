@@ -60,10 +60,6 @@ func New(c *sb.ConsensusConfig, sc *backend.StackConfig) consensus.Consenter {
 }
 
 func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
-	return newChain(sbft, support)
-}
-
-func newChain(sbft *consenter, support consensus.ConsenterSupport) (*chain, error) {
 	logger.Infof("Starting a chain: %d", support.ChainID())
 
 	m := &sb.ConfigMetadata{}

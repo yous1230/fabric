@@ -8,6 +8,8 @@ package sbft
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"io/ioutil"
 
 	"github.com/golang/protobuf/proto"
@@ -50,4 +52,64 @@ func Marshal(md *ConfigMetadata) ([]byte, error) {
 		c.ServerTlsCert = serverCert
 	}
 	return proto.Marshal(copyMd)
+}
+
+
+func ReadJsonConfig(file string) (*ConsensusConfig, error) {
+	configData, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, err
+	}
+
+	jconfig := &JsonConfig{}
+	err = json.Unmarshal(configData, jconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &ConsensusConfig{}
+	config.Consensus = jconfig.Consensus
+	config.Peers = make(map[string][]byte)
+	for n, p := range jconfig.Peers {
+		if p.Address == "" {
+			return nil, fmt.Errorf("The required peer address is missing (for peer %d)", n)
+		}
+		cert, err := crypto.ParseCertPEM(p.Cert)
+		if err != nil {
+			fmt.Println("exiting")
+			return nil, err
+		}
+		config.Peers[p.Address] = cert
+	}
+
+	// XXX check for duplicate cert
+	if config.Consensus.N != 0 && int(config.Consensus.N) != len(config.Peers) {
+		return nil, fmt.Errorf("peer config does not match pbft N")
+	}
+
+	config.Consensus.N = uint64(len(config.Peers))
+
+	return config, nil
+}
+
+func SaveConfig(p *persist.Persist, c *ConsensusConfig) error {
+	craw, err := proto.Marshal(c)
+	if err != nil {
+		return err
+	}
+	err = p.StoreState("config", craw)
+	return err
+}
+
+func RestoreConfig(p *persist.Persist) (*ConsensusConfig, error) {
+	raw, err := p.ReadState("config")
+	if err != nil {
+		return nil, err
+	}
+	config := &ConsensusConfig{}
+	err = proto.Unmarshal(raw, config)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
 }
