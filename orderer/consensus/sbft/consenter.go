@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperledger/fabric/core/comm"
 	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
@@ -42,6 +43,7 @@ var logger = logging.MustGetLogger("orderer/consensus/sbft")
 
 // Consenter interface implementation for new main application
 type consenter struct {
+	cert            []byte
 	config          *sb.ConsensusConfig
 	consensusStack  *consensusStack
 	sbftStackConfig *backend.StackConfig
@@ -58,13 +60,13 @@ type chain struct {
 // New creates a new consenter for the SBFT consensus scheme.
 // It accepts messages being delivered via Enqueue, orders them, and then uses the blockcutter to form the messages
 // into blocks before writing to the given ledger.
-func New(conf *localconfig.TopLevel) consensus.Consenter {
+func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consenter {
 	sc := &backend.StackConfig{ListenAddr: conf.SbftLocal.PeerCommAddr,
 		CertFile: conf.SbftLocal.CertFile,
 		KeyFile:  conf.SbftLocal.KeyFile,
 		DataDir:  conf.SbftLocal.DataDir}
 
-	return &consenter{sbftStackConfig: sc}
+	return &consenter{cert: srvConf.SecOpts.Certificate, sbftStackConfig: sc}
 }
 
 func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
@@ -113,7 +115,7 @@ func createConsensusStack(sbft *consenter) *consensusStack {
 		panic(err)
 	}
 	pPersist := persist.New(sbft.sbftStackConfig.DataDir)
-	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist)
+	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist, sbft.cert)
 	if err != nil {
 		logger.Errorf("Backend instantiation error: %v", err)
 		panic(err)

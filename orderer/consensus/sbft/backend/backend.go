@@ -99,7 +99,7 @@ func (pi peerInfoSlice) Swap(i, j int) {
 	pi[i], pi[j] = pi[j], pi[i]
 }
 
-func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *persist.Persist) (*Backend, error) {
+func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *persist.Persist, tlsCert []byte) (*Backend, error) {
 	c := &Backend{
 		conn:        conn,
 		peers:       make(map[uint64]chan<- *sb.MultiChainMsg),
@@ -118,7 +118,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 			return nil, err
 		}
 		cpi := &PeerInfo{info: pi}
-		if pi.Fingerprint() == conn.Self.Fingerprint() {
+		if bytes.Equal(tlsCert, cert) {
 			c.self = cpi
 		}
 		peerInfo = append(peerInfo, cpi)
@@ -135,7 +135,7 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 		return nil, fmt.Errorf("peer list does not contain local node")
 	}
 
-	logger.Infof("we are replica %d (%s)", c.self.id, c.self.info)
+	logger.Infof("Current peer is replica %d (%s)", c.self.id, c.self.info)
 
 	for _, peer := range c.peerInfo {
 		if peer == c.self {

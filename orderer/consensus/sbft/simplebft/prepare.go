@@ -17,8 +17,7 @@ limitations under the License.
 package simplebft
 
 import (
-	"reflect"
-
+	"github.com/gogo/protobuf/proto"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
@@ -33,7 +32,7 @@ func (s *SBFT) handlePrepare(p *sb.Subject, src uint64) {
 		return
 	}
 
-	if !reflect.DeepEqual(p, &s.cur.subject) {
+	if !proto.Equal(p, &s.cur.subject) {
 		logger.Infof("replica %d: prepare does not match expected subject %v, got %v", s.id, &s.cur.subject, p)
 		return
 	}

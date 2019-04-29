@@ -93,7 +93,6 @@ type reqInfo struct {
 	prepared       bool
 	committed      bool
 	checkpointDone bool
-	//committers     []filter.Committer
 }
 
 type replicaInfo struct {
