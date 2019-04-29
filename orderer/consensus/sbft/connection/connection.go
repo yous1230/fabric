@@ -20,7 +20,9 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+	"github.com/pkg/errors"
 	"net"
 
 	"google.golang.org/grpc"
@@ -55,7 +57,13 @@ func New(addr string, certFile string, keyFile string) (_ *Manager, err error) {
 	}
 
 	c.Cert = &cert
-	c.Self, _ = NewPeerInfo("", cert.Certificate[0])
+
+	var p PeerInfo
+	p.addr = addr
+	p.cert = cert.Leaf
+	p.cp = x509.NewCertPool()
+	p.cp.AddCert(p.cert)
+	c.Self = p
 
 	c.tlsConfig = &tls.Config{
 		Certificates:       []tls.Certificate{cert},
@@ -137,13 +145,27 @@ func NewPeerInfo(addr string, cert []byte) (_ PeerInfo, err error) {
 	var p PeerInfo
 
 	p.addr = addr
-	p.cert, err = x509.ParseCertificate(cert)
+	p.cert, err = validateCert(cert, "server")
 	if err != nil {
 		return
 	}
 	p.cp = x509.NewCertPool()
 	p.cp.AddCert(p.cert)
 	return p, nil
+}
+
+func validateCert(pemData []byte, certRole string) (*x509.Certificate, error) {
+	bl, _ := pem.Decode(pemData)
+
+	if bl == nil {
+		return nil, errors.Errorf("%s TLS certificate is not PEM encoded: %s", certRole, string(pemData))
+	}
+
+	cert, err := x509.ParseCertificate(bl.Bytes)
+	if err != nil {
+		return nil, errors.Errorf("%s TLS certificate has invalid ASN1 structure, %v: %s", certRole, err, string(pemData))
+	}
+	return cert, nil
 }
 
 func (pi *PeerInfo) Fingerprint() string {

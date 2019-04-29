@@ -389,33 +389,3 @@ SbftLocal:
     KeyFile: "sbft/testdata/key.pem"
     # Directory for SBFT data (persistence)
     DataDir: "/tmp"
-
-################################################################################
-#
-#   SECTION: Genesis
-#
-#   - This section is pending removal but is left to support SBFT
-#     to be migrated to configtx.yaml.
-#
-################################################################################
-Genesis:
-
-    # Deprecated Batch Timeout: The amount of time to wait before creating a
-    # batch.
-    DeprecatedBatchTimeout: 2s
-
-    # DeprecatedBatchSize: The absolute maximum number of bytes allowed for
-    # the serialized messages in a batch.
-    DeprecatedBatchSize: 20 MB
-
-    # Defines the SBFT parameters when 'sbft' is specified as the 'OrdererType'
-    SbftShared:
-        # Number of peers
-        "N": 1
-        # Fault tolerance
-        F: 0
-        # Timeout of requests (seconds)
-        RequestTimeoutNsec: 1000000000
-        # Peers (PeerCommAddr) with the path of their cert
-        Peers:
-            "localhost:7050": "/var/hyperledger/orderer/sbft/cert1.pem"

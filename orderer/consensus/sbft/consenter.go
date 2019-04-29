@@ -17,7 +17,10 @@ limitations under the License.
 package sbft
 
 import (
+	"strconv"
+
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
@@ -55,8 +58,13 @@ type chain struct {
 // New creates a new consenter for the SBFT consensus scheme.
 // It accepts messages being delivered via Enqueue, orders them, and then uses the blockcutter to form the messages
 // into blocks before writing to the given ledger.
-func New(c *sb.ConsensusConfig, sc *backend.StackConfig) consensus.Consenter {
-	return &consenter{config: c, sbftStackConfig: sc}
+func New(conf *localconfig.TopLevel) consensus.Consenter {
+	sc := &backend.StackConfig{ListenAddr: conf.SbftLocal.PeerCommAddr,
+		CertFile: conf.SbftLocal.CertFile,
+		KeyFile:  conf.SbftLocal.KeyFile,
+		DataDir:  conf.SbftLocal.DataDir}
+
+	return &consenter{sbftStackConfig: sc}
 }
 
 func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
@@ -68,6 +76,19 @@ func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata 
 	}
 	if m.Options == nil {
 		return nil, errors.New("Sbft options have not been provided")
+	}
+	if len(m.Consenters) == 0 {
+		return nil, errors.New("Sbft consenters have not been provided")
+	}
+	peers := make(map[string][]byte)
+	for _, consenter := range m.Consenters {
+		endpoint := consenter.Host + ":" + strconv.FormatUint(uint64(consenter.Port), 10)
+		peers[endpoint] = consenter.ServerTlsCert
+	}
+
+	sbft.config = &sb.ConsensusConfig{
+		Consensus: m.Options,
+		Peers:     peers,
 	}
 
 	if sbft.sbftPeers == nil {

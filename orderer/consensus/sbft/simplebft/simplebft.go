@@ -18,6 +18,7 @@ package simplebft
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/orderer/consensus"
 	"math"
 	"reflect"
 	"time"
@@ -63,9 +64,10 @@ type Canceller interface {
 
 // SBFT is a simplified PBFT implementation.
 type SBFT struct {
-	sys System
+	sys     System
+	support consensus.ConsenterSupport
 
-	config            sb.Config
+	config            sb.Options
 	id                uint64
 	view              uint64
 	blocks            [][]*sb.Request
@@ -79,7 +81,6 @@ type SBFT struct {
 	pending           map[string]*sb.Request
 	validated         map[string]bool
 	chainId           string
-	//primarycommitters [][]filter.Committer
 }
 
 type reqInfo struct {
@@ -109,7 +110,7 @@ type dummyCanceller struct{}
 func (d dummyCanceller) Cancel() {}
 
 // New creates a new SBFT instance.
-func New(id uint64, chainID string, config *sb.Config, sys System) (*SBFT, error) {
+func New(id uint64, chainID string, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
 	if config.F*3+1 > config.N {
 		return nil, fmt.Errorf("invalid combination of N (%d) and F (%d)", config.N, config.F)
 	}
@@ -117,6 +118,7 @@ func New(id uint64, chainID string, config *sb.Config, sys System) (*SBFT, error
 	s := &SBFT{
 		config:          *config,
 		sys:             sys,
+		support:         support,
 		id:              id,
 		chainId:         chainID,
 		viewChangeTimer: dummyCanceller{},
@@ -124,7 +126,6 @@ func New(id uint64, chainID string, config *sb.Config, sys System) (*SBFT, error
 		pending:         make(map[string]*sb.Request),
 		validated:       make(map[string]bool),
 		blocks:          make([][]*sb.Request, 0, 3),
-		//primarycommitters: make([][]filter.Committer, 0),
 	}
 	s.sys.AddReceiver(chainID, s)
 

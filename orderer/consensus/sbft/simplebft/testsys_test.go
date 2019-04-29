@@ -31,7 +31,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
+	"github.com/op/go-logging"
 )
+
+var testLog = logging.MustGetLogger("test")
 
 const defaultMaxReqCount = uint64(5)
 

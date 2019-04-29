@@ -17,8 +17,6 @@ limitations under the License.
 package simplebft
 
 import (
-	"time"
-
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 )
 
@@ -57,7 +55,7 @@ func (s *SBFT) handleRequest(req *sb.Request, src uint64) {
 
 func (s *SBFT) startBatchTimer() {
 	if s.batchTimer == nil {
-		s.batchTimer = s.sys.Timer(time.Duration(s.config.BatchDurationNsec), s.cutAndMaybeSend)
+		s.batchTimer = s.sys.Timer(s.support.SharedConfig().BatchTimeout(), s.cutAndMaybeSend)
 	}
 }
 

@@ -245,9 +245,9 @@ func (b *Backend) run() {
 }
 
 // AddSbftPeer adds a new SBFT peer for the given chainId using the given support and configuration
-func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport, config *sb.Config) (*simplebft.SBFT, error) {
+func (b *Backend) AddSbftPeer(chainID string, support consensus.ConsenterSupport, config *sb.Options) (*simplebft.SBFT, error) {
 	b.supports[chainID] = support
-	return simplebft.New(b.GetMyId(), chainID, config, b)
+	return simplebft.New(b.GetMyId(), chainID, support, config, b)
 }
 
 func (b *Backend) Validate(chainID string, req *sb.Request) ([][]*sb.Request, bool) {

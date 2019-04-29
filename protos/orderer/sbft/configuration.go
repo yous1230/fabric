@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package sbft
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"io/ioutil"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/protos/orderer"
 )
 
@@ -54,7 +55,6 @@ func Marshal(md *ConfigMetadata) ([]byte, error) {
 	return proto.Marshal(copyMd)
 }
 
-
 func ReadJsonConfig(file string) (*ConsensusConfig, error) {
 	configData, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -86,7 +86,6 @@ func ReadJsonConfig(file string) (*ConsensusConfig, error) {
 	if config.Consensus.N != 0 && int(config.Consensus.N) != len(config.Peers) {
 		return nil, fmt.Errorf("peer config does not match pbft N")
 	}
-
 	config.Consensus.N = uint64(len(config.Peers))
 
 	return config, nil
