@@ -82,10 +82,10 @@ func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata 
 	if len(m.Consenters) == 0 {
 		return nil, errors.New("Sbft consenters have not been provided")
 	}
-	peers := make(map[string][]byte)
+	peers := make(map[string]*sb.Consenter)
 	for _, consenter := range m.Consenters {
 		endpoint := consenter.Host + ":" + strconv.FormatUint(uint64(consenter.Port), 10)
-		peers[endpoint] = consenter.ServerTlsCert
+		peers[endpoint] = consenter
 	}
 
 	sbft.config = &sb.ConsensusConfig{

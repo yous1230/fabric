@@ -45,5 +45,5 @@ message json_config {
 
 message peer {
     string address = 1;
-    string cert = 2;
+    Consenter cert = 2;
 }

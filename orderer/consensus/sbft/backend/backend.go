@@ -99,7 +99,7 @@ func (pi peerInfoSlice) Swap(i, j int) {
 	pi[i], pi[j] = pi[j], pi[i]
 }
 
-func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *persist.Persist, tlsCert []byte) (*Backend, error) {
+func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, persist *persist.Persist, tlsCert []byte) (*Backend, error) {
 	c := &Backend{
 		conn:        conn,
 		peers:       make(map[uint64]chan<- *sb.MultiChainMsg),
@@ -111,14 +111,14 @@ func NewBackend(peers map[string][]byte, conn *connection.Manager, persist *pers
 	}
 
 	var peerInfo []*PeerInfo
-	for addr, cert := range peers {
+	for addr, consenter := range peers {
 		logger.Infof("New peer connect addr: %s", addr)
-		pi, err := connection.NewPeerInfo(addr, cert)
+		pi, err := connection.NewPeerInfo(addr, consenter.ServerTlsCert)
 		if err != nil {
 			return nil, err
 		}
 		cpi := &PeerInfo{info: pi}
-		if bytes.Equal(tlsCert, cert) {
+		if bytes.Equal(tlsCert, consenter.ServerTlsCert) {
 			c.self = cpi
 		}
 		peerInfo = append(peerInfo, cpi)
