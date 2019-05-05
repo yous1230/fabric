@@ -22,7 +22,7 @@ message ConfigMetadata {
 message Consenter {
     string host = 1;
     uint32 port = 2;
-    bytes client_tls_cert = 3;
+    bytes client_sign_cert = 3;
     bytes server_tls_cert = 4;
 }
 
