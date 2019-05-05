@@ -39,7 +39,6 @@ type PeerInfo struct {
 type Manager struct {
 	Server    *grpc.Server
 	Listener  net.Listener
-	Self      PeerInfo
 	tlsConfig *tls.Config
 	Cert      *tls.Certificate
 }
@@ -57,13 +56,6 @@ func New(addr string, certFile string, keyFile string) (_ *Manager, err error) {
 	}
 
 	c.Cert = &cert
-
-	var p PeerInfo
-	p.addr = addr
-	p.cert = cert.Leaf
-	p.cp = x509.NewCertPool()
-	p.cp.AddCert(p.cert)
-	c.Self = p
 
 	c.tlsConfig = &tls.Config{
 		Certificates:       []tls.Certificate{cert},

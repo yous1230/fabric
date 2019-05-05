@@ -430,15 +430,15 @@ loop:
 			if c.Port == 0 {
 				logger.Panic("consenter info in sbft configuration did not specify port")
 			}
-			if c.ClientTlsCert == nil {
-				logger.Panic("consenter info in sbft configuration did not specify client TLS cert")
+			if c.ClientSignCert == nil {
+				logger.Panic("consenter info in sbft configuration did not specify client Sign cert")
 			}
 			if c.ServerTlsCert == nil {
 				logger.Panic("consenter info in sbft configuration did not specify server TLS cert")
 			}
-			clientCertPath := string(c.GetClientTlsCert())
+			clientCertPath := string(c.GetClientSignCert())
 			cf.TranslatePathInPlace(configDir, &clientCertPath)
-			c.ClientTlsCert = []byte(clientCertPath)
+			c.ClientSignCert = []byte(clientCertPath)
 			serverCertPath := string(c.GetServerTlsCert())
 			cf.TranslatePathInPlace(configDir, &serverCertPath)
 			c.ServerTlsCert = []byte(serverCertPath)

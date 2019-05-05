@@ -35,15 +35,15 @@ message Options {
 
 message consensus_config {
     Options consensus = 1;
-    map<string, bytes> peers = 2;
-};
+    map<string, Consenter> peers = 2;
+}
 
 message json_config {
     Options consensus = 1;
     repeated peer peers = 2;
-};
+}
 
 message peer {
     string address = 1;
     string cert = 2;
-};
+}
