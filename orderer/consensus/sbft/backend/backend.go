@@ -23,6 +23,8 @@ import (
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/asn1"
 	"encoding/gob"
 	"fmt"
@@ -36,6 +38,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
+	cry "github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
@@ -63,6 +66,9 @@ type Backend struct {
 	self *PeerInfo
 	// address to PeerInfo mapping
 	peerInfo map[string]*PeerInfo
+	// msg sign and verify
+	signCert    *tls.Certificate
+	verifyCerts map[uint64]*x509.Certificate // replica number to cert
 
 	// chainId to instance mapping
 	consensus   map[string]simplebft.Receiver
@@ -99,21 +105,27 @@ func (pi peerInfoSlice) Swap(i, j int) {
 	pi[i], pi[j] = pi[j], pi[i]
 }
 
-func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, persist *persist.Persist, tlsCert []byte) (*Backend, error) {
+func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, persist *persist.Persist, tlsCert []byte, localMsp string) (*Backend, error) {
 	c := &Backend{
 		conn:        conn,
 		peers:       make(map[uint64]chan<- *sb.MultiChainMsg),
 		peerInfo:    make(map[string]*PeerInfo),
+		verifyCerts: make(map[uint64]*x509.Certificate),
 		supports:    make(map[string]consensus.ConsenterSupport),
 		consensus:   make(map[string]simplebft.Receiver),
 		bc:          make(map[string]*blockCreator),
 		lastBatches: make(map[string]*sb.Batch),
 	}
+	if signCert, err := cry.LoadX509KeyPair(localMsp); err != nil {
+		return nil, err
+	} else {
+		c.signCert = signCert
+	}
 
 	var peerInfo []*PeerInfo
 	for addr, consenter := range peers {
 		logger.Infof("New peer connect addr: %s", addr)
-		pi, err := connection.NewPeerInfo(addr, consenter.ServerTlsCert)
+		pi, err := connection.NewPeerInfo(addr, consenter.ServerTlsCert, consenter.ClientSignCert)
 		if err != nil {
 			return nil, err
 		}
@@ -128,6 +140,7 @@ func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, persis
 	sort.Sort(peerInfoSlice(peerInfo))
 	for i, pi := range peerInfo {
 		pi.id = uint64(i)
+		c.verifyCerts[pi.id] = pi.info.VerifyCert()
 		logger.Infof("replica %d: %s", i, pi.info.Fingerprint())
 	}
 
@@ -511,16 +524,16 @@ func (b *Backend) LastBatch(chainId string) *sb.Batch {
 
 // Sign signs a given data
 func (b *Backend) Sign(data []byte) []byte {
-	return Sign(b.conn.Cert.PrivateKey, data)
+	return Sign(b.signCert.PrivateKey, data)
 }
 
 // CheckSig checks a signature
 func (b *Backend) CheckSig(data []byte, src uint64, sig []byte) error {
-	leaf := b.conn.Cert.Leaf
-	if leaf == nil {
+	cert, ok := b.verifyCerts[src]
+	if !ok {
 		panic("No public key found: certificate leaf is nil.")
 	}
-	return CheckSig(leaf.PublicKey, data, sig)
+	return CheckSig(cert.PublicKey, data, sig)
 }
 
 // Reconnect requests connection to a replica identified by its ID and chainId

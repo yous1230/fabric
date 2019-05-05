@@ -31,9 +31,10 @@ import (
 )
 
 type PeerInfo struct {
-	addr string
-	cert *x509.Certificate
-	cp   *x509.CertPool
+	addr   string
+	cert   *x509.Certificate
+	cp     *x509.CertPool
+	verify *x509.Certificate
 }
 
 type Manager struct {
@@ -43,7 +44,7 @@ type Manager struct {
 	Cert      *tls.Certificate
 }
 
-func New(addr string, certFile string, keyFile string) (_ *Manager, err error) {
+func New(addr string, certFile, keyFile string) (_ *Manager, err error) {
 	c := &Manager{}
 
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
@@ -133,11 +134,15 @@ func GetPeerInfo(s grpc.ServerStream) PeerInfo {
 	return pi
 }
 
-func NewPeerInfo(addr string, cert []byte) (_ PeerInfo, err error) {
+func NewPeerInfo(addr string, cert, verify []byte) (_ PeerInfo, err error) {
 	var p PeerInfo
 
 	p.addr = addr
 	p.cert, err = validateCert(cert, "server")
+	if err != nil {
+		return
+	}
+	p.verify, err = validateCert(verify, "client")
 	if err != nil {
 		return
 	}
@@ -171,4 +176,9 @@ func (pi *PeerInfo) Cert() *x509.Certificate {
 
 func (pi PeerInfo) String() string {
 	return fmt.Sprintf("%.6s [%s]", pi.Fingerprint(), pi.addr)
+}
+
+func (pi *PeerInfo) VerifyCert() *x509.Certificate {
+	cert := *pi.verify
+	return &cert
 }

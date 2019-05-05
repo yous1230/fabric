@@ -17,9 +17,12 @@ limitations under the License.
 package crypto
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 )
 
 func ParseCertPEM(certFile string) ([]byte, error) {
@@ -44,4 +47,37 @@ func ParseCertPEM(certFile string) ([]byte, error) {
 	}
 
 	return b.Bytes, nil
+}
+
+func LoadX509KeyPair(dir string) (*tls.Certificate, error) {
+	//ReadDir returns sorted list of files in dir
+	signPath := filepath.Join(dir, "signcerts")
+	fis, err := ioutil.ReadDir(signPath)
+	if err != nil {
+		return nil, fmt.Errorf("ReadDir signcerts failed %s\n", err)
+	}
+	if len(fis) != 1 {
+		return nil, fmt.Errorf("Invalid signcerts dir there are %v files. ", len(fis))
+	}
+	signFile := filepath.Join(signPath, fis[0].Name())
+
+	keyPath := filepath.Join(dir, "keystore")
+	keyFis, err := ioutil.ReadDir(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("ReadDir keystore failed %s\n", err)
+	}
+	if len(keyFis) != 1 {
+		return nil, fmt.Errorf("Invalid keystore dir there are %v files. ", len(keyFis))
+	}
+	keyFile := filepath.Join(keyPath, keyFis[0].Name())
+
+	cert, err := tls.LoadX509KeyPair(signFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+	cert.Leaf, err = x509.ParseCertificate(cert.Certificate[0])
+	if err != nil {
+		return nil, err
+	}
+	return &cert, nil
 }

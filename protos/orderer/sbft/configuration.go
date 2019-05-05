@@ -12,7 +12,6 @@ import (
 	"io/ioutil"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/protos/orderer"
 )
@@ -69,17 +68,17 @@ func ReadJsonConfig(file string) (*ConsensusConfig, error) {
 
 	config := &ConsensusConfig{}
 	config.Consensus = jconfig.Consensus
-	config.Peers = make(map[string][]byte)
+	config.Peers = make(map[string]*Consenter)
 	for n, p := range jconfig.Peers {
 		if p.Address == "" {
 			return nil, fmt.Errorf("The required peer address is missing (for peer %d)", n)
 		}
-		cert, err := crypto.ParseCertPEM(p.Cert)
-		if err != nil {
-			fmt.Println("exiting")
-			return nil, err
-		}
-		config.Peers[p.Address] = cert
+		//cert, err := crypto.ParseCertPEM(p.Cert)
+		//if err != nil {
+		//	fmt.Println("exiting")
+		//	return nil, err
+		//}
+		config.Peers[p.Address] = p.Cert
 	}
 
 	// XXX check for duplicate cert

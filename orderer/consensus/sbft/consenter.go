@@ -44,6 +44,7 @@ var logger = logging.MustGetLogger("orderer/consensus/sbft")
 // Consenter interface implementation for new main application
 type consenter struct {
 	cert            []byte
+	localMsp        string
 	config          *sb.ConsensusConfig
 	consensusStack  *consensusStack
 	sbftStackConfig *backend.StackConfig
@@ -66,7 +67,7 @@ func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consen
 		KeyFile:  conf.SbftLocal.KeyFile,
 		DataDir:  conf.SbftLocal.DataDir}
 
-	return &consenter{cert: srvConf.SecOpts.Certificate, sbftStackConfig: sc}
+	return &consenter{cert: srvConf.SecOpts.Certificate, localMsp: conf.General.LocalMSPDir, sbftStackConfig: sc}
 }
 
 func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
@@ -115,7 +116,7 @@ func createConsensusStack(sbft *consenter) *consensusStack {
 		panic(err)
 	}
 	pPersist := persist.New(sbft.sbftStackConfig.DataDir)
-	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist, sbft.cert)
+	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist, sbft.cert, sbft.localMsp)
 	if err != nil {
 		logger.Errorf("Backend instantiation error: %v", err)
 		panic(err)
