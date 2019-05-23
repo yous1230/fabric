@@ -151,16 +151,9 @@ func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, persis
 
 	logger.Infof("Current peer is replica %d (%s)", c.self.id, c.self.info)
 
-	for _, peer := range c.peerInfo {
-		if peer == c.self {
-			continue
-		}
-		go c.connectWorker(peer)
-	}
 	sb.RegisterConsensusServer(conn.Server, (*consensusConn)(c))
 	c.persistence = persist
 	c.queue = make(chan Executable)
-	go c.run()
 	return c, nil
 }
 
@@ -530,6 +523,24 @@ func (b *Backend) CheckSig(data []byte, src uint64, sig []byte) error {
 // Reconnect requests connection to a replica identified by its ID and chainId
 func (b *Backend) Reconnect(chainId string, replica uint64) {
 	b.enqueueConnection(chainId, replica)
+}
+
+func (b *Backend) StartAndConnectWorkers() {
+	go func() {
+		if err := b.conn.Server.Serve(b.conn.Listener); err != nil {
+			logger.Errorf("Backend Server start error: %v", err)
+			panic(err)
+		}
+	}()
+
+	for _, peer := range b.peerInfo {
+		if peer == b.self {
+			continue
+		}
+		go b.connectWorker(peer)
+	}
+
+	go b.run()
 }
 
 // Sign signs a given data

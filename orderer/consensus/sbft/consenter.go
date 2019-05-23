@@ -17,8 +17,6 @@ limitations under the License.
 package sbft
 
 import (
-	"strconv"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric/core/comm"
 	"github.com/hyperledger/fabric/orderer/common/localconfig"
@@ -32,6 +30,8 @@ import (
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
+	"strconv"
+	"sync"
 )
 
 type consensusStack struct {
@@ -40,7 +40,7 @@ type consensusStack struct {
 }
 
 var logger = logging.MustGetLogger("orderer/consensus/sbft")
-
+var once sync.Once
 // Consenter interface implementation for new main application
 type consenter struct {
 	cert            []byte
@@ -122,13 +122,6 @@ func createConsensusStack(sbft *consenter) *consensusStack {
 		panic(err)
 	}
 
-	go func() {
-		if err := conn.Server.Serve(conn.Listener); err != nil {
-			logger.Errorf("Backend Server start error: %v", err)
-			panic(err)
-		}
-	}()
-
 	return &consensusStack{
 		backend: pBackend,
 		persist: pPersist,
@@ -150,7 +143,7 @@ func initSbftPeer(sbft *consenter, support consensus.ConsenterSupport) *simplebf
 // It implements the multichain.Chain interface. It is called by multichain.NewManagerImpl()
 // which is invoked when the ordering process is launched, before the call to NewServer().
 func (ch *chain) Start() {
-
+	once.Do(ch.consensusStack.backend.StartAndConnectWorkers)
 }
 
 // Halt frees the resources which were allocated for this Chain
