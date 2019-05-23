@@ -83,7 +83,8 @@ type StackConfig struct {
 	ListenAddr string
 	CertFile   string
 	KeyFile    string
-	DataDir    string
+	WALDir     string
+	SnapDir    string
 }
 
 type PeerInfo struct {
@@ -463,18 +464,6 @@ func (b *Backend) Timer(d time.Duration, tf func()) simplebft.Canceller {
 
 // Deliver writes a block
 func (b *Backend) Deliver(chainId string, batch *sb.Batch) {
-	//blockContents := make([]*cb.Envelope, 0, len(batch.Payloads))
-	//for _, p := range batch.Payloads {
-	//	envelope := &cb.Envelope{}
-	//	err := proto.Unmarshal(p, envelope)
-	//	if err == nil {
-	//		blockContents = append(blockContents, envelope)
-	//	} else {
-	//		logger.Warningf("Payload cannot be unmarshalled.")
-	//	}
-	//}
-	//block := b.supports[chainId].CreateNextBlock(blockContents)
-
 	block := utils.UnmarshalBlockOrPanic(batch.Payloads[0])
 	b.lastBatches[chainId] = batch
 	// TODO SBFT needs to use Rawledger's structures and signatures over the Block.
@@ -486,8 +475,10 @@ func (b *Backend) Deliver(chainId string, batch *sb.Batch) {
 	blockMetadata.Metadata = metadata
 	m := utils.MarshalOrPanic(blockMetadata)
 	if utils.IsConfigBlock(block) {
+		logger.Infof("Writing config block [%d] for chainId: %s to ledger", block.Header.Number, chainId)
 		b.supports[chainId].WriteConfigBlock(block, m)
 	} else {
+		logger.Infof("Writing block [%d] for chainId: %s to ledger", block.Header.Number, chainId)
 		b.supports[chainId].WriteBlock(block, m)
 	}
 }

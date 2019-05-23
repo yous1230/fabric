@@ -65,7 +65,8 @@ func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consen
 	sc := &backend.StackConfig{ListenAddr: conf.SbftLocal.PeerCommAddr,
 		CertFile: conf.SbftLocal.CertFile,
 		KeyFile:  conf.SbftLocal.KeyFile,
-		DataDir:  conf.SbftLocal.DataDir}
+		WALDir:   conf.SbftLocal.WALDir,
+		SnapDir:  conf.SbftLocal.SnapDir}
 
 	return &consenter{cert: srvConf.SecOpts.Certificate, localMsp: conf.General.LocalMSPDir, sbftStackConfig: sc}
 }
@@ -109,13 +110,12 @@ func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata 
 }
 
 func createConsensusStack(sbft *consenter) *consensusStack {
-	logger.Infof("%v %v %v", sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
 	conn, err := connection.New(sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
 	if err != nil {
 		logger.Errorf("Error when trying to connect: %s", err)
 		panic(err)
 	}
-	pPersist := persist.New(sbft.sbftStackConfig.DataDir)
+	pPersist := persist.New(sbft.sbftStackConfig.WALDir)
 	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist, sbft.cert, sbft.localMsp)
 	if err != nil {
 		logger.Errorf("Backend instantiation error: %v", err)

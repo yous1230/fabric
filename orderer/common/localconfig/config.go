@@ -225,7 +225,8 @@ type SbftLocal struct {
 	PeerCommAddr string
 	CertFile     string
 	KeyFile      string
-	DataDir      string
+	WALDir       string
+	SnapDir      string
 }
 
 // SbftShared contains config for the SBFT network.
@@ -329,7 +330,8 @@ var Defaults = TopLevel{
 		PeerCommAddr: ":6101",
 		CertFile:     "sbft/testdata/cert1.pem",
 		KeyFile:      "sbft/testdata/key.pem",
-		DataDir:      "/tmp",
+		WALDir:       "/var/hyperledger/production/orderer/sbft/wal",
+		SnapDir:      "/var/hyperledger/production/orderer/sbft/snapshot",
 	},
 }
 

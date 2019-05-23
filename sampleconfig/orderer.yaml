@@ -388,4 +388,6 @@ SbftLocal:
     CertFile: "sbft/testdata/cert1.pem"
     KeyFile: "sbft/testdata/key.pem"
     # Directory for SBFT data (persistence)
-    DataDir: "/tmp"
+#    DataDir: "/tmp"
+    WALDir: /var/hyperledger/production/orderer/sbft/wal
+    SnapDir: /var/hyperledger/production/orderer/sbft/snapshot
