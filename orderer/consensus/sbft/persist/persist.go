@@ -16,37 +16,50 @@ limitations under the License.
 
 package persist
 
-import "github.com/hyperledger/fabric/orderer/consensus/sbft/db"
-
 // Persist provides an abstraction to access the Persist column family
 // in the database.
-type Persist struct{}
+type Persist struct {
+	db *RocksDB
+}
+
+func New(logDir string, logLevel string, maxLogFileSize uint64, keepLogFileNum uint32) *Persist {
+	return &Persist{
+		&RocksDB{LogDir: logDir,
+			LogLevel:       logLevel,
+			MaxLogFileSize: maxLogFileSize,
+			KeepLogFileNum: keepLogFileNum},
+	}
+}
+
+func (h *Persist) Start() {
+	h.db.Start()
+}
+
+func (h *Persist) Stop() {
+	h.db.Stop()
+}
 
 // StoreState stores a key,value pair
 func (h *Persist) StoreState(key string, value []byte) error {
-	db := db.GetDBHandle()
-	return db.Put(db.PersistCF, []byte("consensus."+key), value)
+	return h.db.Put(h.db.PersistCF, []byte("consensus."+key), value)
 }
 
 // DelState removes a key,value pair
 func (h *Persist) DelState(key string) {
-	db := db.GetDBHandle()
-	db.Delete(db.PersistCF, []byte("consensus."+key))
+	h.db.Delete(h.db.PersistCF, []byte("consensus."+key))
 }
 
 // ReadState retrieves a value to a key
 func (h *Persist) ReadState(key string) ([]byte, error) {
-	db := db.GetDBHandle()
-	return db.Get(db.PersistCF, []byte("consensus."+key))
+	return h.db.Get(h.db.PersistCF, []byte("consensus."+key))
 }
 
 // ReadStateSet retrieves all key,value pairs where the key starts with prefix
 func (h *Persist) ReadStateSet(prefix string) (map[string][]byte, error) {
-	db := db.GetDBHandle()
 	prefixRaw := []byte("consensus." + prefix)
 
 	ret := make(map[string][]byte)
-	it := db.GetIterator(db.PersistCF)
+	it := h.db.GetIterator(h.db.PersistCF)
 	defer it.Close()
 	for it.Seek(prefixRaw); it.ValidForPrefix(prefixRaw); it.Next() {
 		key := string(it.Key().Data())

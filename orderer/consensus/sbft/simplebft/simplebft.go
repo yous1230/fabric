@@ -18,6 +18,7 @@ package simplebft
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"math"
 	"reflect"
 	"time"
@@ -108,7 +109,7 @@ type dummyCanceller struct{}
 func (d dummyCanceller) Cancel() {}
 
 // New creates a new SBFT instance.
-func New(id uint64, dataDir string, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
+func New(id uint64, sc *localconfig.SbftLocal, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
 	chainID := support.ChainID()
 	if config.F*3+1 > config.N {
 		return nil, fmt.Errorf("invalid combination of N (%d) and F (%d)", config.N, config.F)
@@ -118,7 +119,7 @@ func New(id uint64, dataDir string, support consensus.ConsenterSupport, config *
 		sys:             sys,
 		support:         support,
 		logger:          flogging.MustGetLogger("orderer.consensus.sbft.simplebft"),
-		persistence:     &persist.Persist{},
+		persistence:     persist.New(sc.DataDir, sc.Db.LogLevel, sc.Db.MaxLogFileSize, sc.Db.KeepLogFileNum),
 		config:          *config,
 		id:              id,
 		chainId:         chainID,
@@ -295,6 +296,13 @@ func (s *SBFT) deliverBatch(batch *sb.Batch) {
 }
 
 ////////////////////////////////////////////////
+func (s *SBFT) StartRocksDb() {
+	s.persistence.Start()
+}
+
+func (s *SBFT) StopRocksDb() {
+	s.persistence.Stop()
+}
 
 // Persist persists data identified by a chainId and a key
 func (s *SBFT) Persist(chainId string, key string, data proto.Message) {

@@ -37,6 +37,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
 	cry "github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
@@ -71,6 +72,7 @@ type Backend struct {
 	bc          map[string]*blockCreator
 	lastBatches map[string]*sb.Batch
 	supports    map[string]consensus.ConsenterSupport
+	sbftPeers   map[string]*simplebft.SBFT
 
 	logger *flogging.FabricLogger
 }
@@ -113,6 +115,7 @@ func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, tlsCer
 		consensus:   make(map[string]simplebft.Receiver),
 		bc:          make(map[string]*blockCreator),
 		lastBatches: make(map[string]*sb.Batch),
+		sbftPeers:   make(map[string]*simplebft.SBFT),
 		logger:      flogging.MustGetLogger("orderer.consensus.sbft.backend"),
 	}
 	if signCert, err := cry.LoadX509KeyPair(localMsp); err != nil {
@@ -152,6 +155,17 @@ func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, tlsCer
 	sb.RegisterConsensusServer(conn.Server, (*consensusConn)(c))
 	c.queue = make(chan Executable)
 	return c, nil
+}
+
+// InitSbftPeer create a new SBFT peer for the given chainId using the given support and configuration
+func (b *Backend) InitSbftPeer(sc *localconfig.SbftLocal, cc *sb.ConsensusConfig, support consensus.ConsenterSupport) {
+	b.supports[support.ChainID()] = support
+	sbftPeer, err := simplebft.New(b.GetMyId(), sc, support, cc.Consensus, b)
+	if err != nil {
+		b.logger.Errorf("SBFT peer instantiation error.")
+		panic(err)
+	}
+	b.sbftPeers[support.ChainID()] = sbftPeer
 }
 
 // GetMyId returns the ID of the backend in the SFTT network (1..N)
@@ -246,12 +260,6 @@ func (b *Backend) run() {
 		e := <-b.queue
 		e.Execute(b)
 	}
-}
-
-// AddSbftPeer adds a new SBFT peer for the given chainId using the given support and configuration
-func (b *Backend) AddSbftPeer(dataDir string, support consensus.ConsenterSupport, config *sb.Options) (*simplebft.SBFT, error) {
-	b.supports[support.ChainID()] = support
-	return simplebft.New(b.GetMyId(), dataDir, support, config, b)
 }
 
 func (b *Backend) Validate(chainID string, req *sb.Request) ([][]*sb.Request, bool) {
@@ -500,6 +508,14 @@ func (b *Backend) StartAndConnectWorkers() {
 	}
 
 	go b.run()
+}
+
+func (b *Backend) StartRocksDb(chainId string) {
+	b.sbftPeers[chainId].StartRocksDb()
+}
+
+func (b *Backend) StopRocksDb(chainId string) {
+	b.sbftPeers[chainId].StopRocksDb()
 }
 
 // Sign signs a given data

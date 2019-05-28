@@ -14,17 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package db
+package persist
 
 import (
 	"fmt"
 	"io"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/op/go-logging"
-	"github.com/spf13/viper"
 	"github.com/tecbot/gorocksdb"
 )
 
@@ -44,53 +42,18 @@ var columnfamilies = []string{
 
 // RocksDB encapsulates rocksdb's structures
 type RocksDB struct {
+	LogDir         string
+	LogLevel       string
+	MaxLogFileSize uint64
+	KeepLogFileNum uint32
+
 	DB        *gorocksdb.DB
 	PersistCF *gorocksdb.ColumnFamilyHandle
-
-}
-
-var openchainDB = create()
-
-// Create create an openchainDB instance
-func create() *RocksDB {
-	return &RocksDB{}
-}
-
-// GetDBHandle gets an opened openchainDB singleton. Note that method Start must always be invoked before this method.
-func GetDBHandle() *RocksDB {
-	return openchainDB
-}
-
-// Start the db, init the openchainDB instance and open the db. Note this method has no guarantee correct behavior concurrent invocation.
-func Start() {
-	openchainDB.open()
-}
-
-// Stop the db. Note this method has no guarantee correct behavior concurrent invocation.
-func Stop() {
-	openchainDB.close()
-}
-
-// GetSnapshot returns a point-in-time view of the DB. You MUST call snapshot.Release()
-// when you are done with the snapshot.
-func (openchainDB *RocksDB) GetSnapshot() *gorocksdb.Snapshot {
-	return openchainDB.DB.NewSnapshot()
-}
-
-func getDBPath() string {
-	dbPath := viper.GetString("peer.fileSystemPath")
-	if dbPath == "" {
-		panic("DB path not specified in configuration file. Please check that property 'peer.fileSystemPath' is set")
-	}
-	if !strings.HasSuffix(dbPath, "/") {
-		dbPath = dbPath + "/"
-	}
-	return dbPath + "db"
 }
 
 // Open open underlying rocksdb
-func (openchainDB *RocksDB) open() {
-	dbPath := getDBPath()
+func (r *RocksDB) Start() {
+	dbPath := r.LogDir
 	missing, err := dirMissingOrEmpty(dbPath)
 	if err != nil {
 		panic(fmt.Sprintf("Error while trying to open DB: %s", err))
@@ -107,19 +70,19 @@ func (openchainDB *RocksDB) open() {
 	opts := gorocksdb.NewDefaultOptions()
 	defer opts.Destroy()
 
-	maxLogFileSize := viper.GetInt("peer.db.maxLogFileSize")
+	maxLogFileSize := r.MaxLogFileSize
 	if maxLogFileSize > 0 {
 		dbLogger.Infof("Setting rocksdb maxLogFileSize to %d", maxLogFileSize)
-		opts.SetMaxLogFileSize(maxLogFileSize)
+		opts.SetMaxLogFileSize(int(maxLogFileSize))
 	}
 
-	keepLogFileNum := viper.GetInt("peer.db.keepLogFileNum")
+	keepLogFileNum := r.KeepLogFileNum
 	if keepLogFileNum > 0 {
 		dbLogger.Infof("Setting rocksdb keepLogFileNum to %d", keepLogFileNum)
-		opts.SetKeepLogFileNum(keepLogFileNum)
+		opts.SetKeepLogFileNum(int(keepLogFileNum))
 	}
 
-	logLevelStr := viper.GetString("peer.db.loglevel")
+	logLevelStr := r.LogLevel
 	logLevel, ok := rocksDBLogLevelMap[logLevelStr]
 
 	if ok {
@@ -143,21 +106,21 @@ func (openchainDB *RocksDB) open() {
 		panic(fmt.Sprintf("Error opening DB: %s", err))
 	}
 
-	openchainDB.DB = db
-	openchainDB.PersistCF = cfHandlers[1]
+	r.DB = db
+	r.PersistCF = cfHandlers[1]
 }
 
 // Close releases all column family handles and closes rocksdb
-func (openchainDB *RocksDB) close() {
-	openchainDB.PersistCF.Destroy()
-	openchainDB.DB.Close()
+func (r *RocksDB) Stop() {
+	r.PersistCF.Destroy()
+	r.DB.Close()
 }
 
 // Get returns the valud for the given column family and key
-func (openchainDB *RocksDB) Get(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) ([]byte, error) {
+func (r *RocksDB) Get(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) ([]byte, error) {
 	opt := gorocksdb.NewDefaultReadOptions()
 	defer opt.Destroy()
-	slice, err := openchainDB.DB.GetCF(opt, cfHandler, key)
+	slice, err := r.DB.GetCF(opt, cfHandler, key)
 	if err != nil {
 		dbLogger.Errorf("Error while trying to retrieve key: %s", key)
 		return nil, err
@@ -171,10 +134,10 @@ func (openchainDB *RocksDB) Get(cfHandler *gorocksdb.ColumnFamilyHandle, key []b
 }
 
 // Put saves the key/value in the given column family
-func (openchainDB *RocksDB) Put(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte, value []byte) error {
+func (r *RocksDB) Put(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte, value []byte) error {
 	opt := gorocksdb.NewDefaultWriteOptions()
 	defer opt.Destroy()
-	err := openchainDB.DB.PutCF(opt, cfHandler, key, value)
+	err := r.DB.PutCF(opt, cfHandler, key, value)
 	if err != nil {
 		dbLogger.Errorf("Error while trying to write key: %s", key)
 		return err
@@ -183,10 +146,10 @@ func (openchainDB *RocksDB) Put(cfHandler *gorocksdb.ColumnFamilyHandle, key []b
 }
 
 // Delete delets the given key in the specified column family
-func (openchainDB *RocksDB) Delete(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) error {
+func (r *RocksDB) Delete(cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) error {
 	opt := gorocksdb.NewDefaultWriteOptions()
 	defer opt.Destroy()
-	err := openchainDB.DB.DeleteCF(opt, cfHandler, key)
+	err := r.DB.DeleteCF(opt, cfHandler, key)
 	if err != nil {
 		dbLogger.Errorf("Error while trying to delete key: %s", key)
 		return err
@@ -194,11 +157,17 @@ func (openchainDB *RocksDB) Delete(cfHandler *gorocksdb.ColumnFamilyHandle, key 
 	return nil
 }
 
-func (openchainDB *RocksDB) getFromSnapshot(snapshot *gorocksdb.Snapshot, cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) ([]byte, error) {
+// GetSnapshot returns a point-in-time view of the DB. You MUST call snapshot.Release()
+// when you are done with the snapshot.
+func (r *RocksDB) GetSnapshot() *gorocksdb.Snapshot {
+	return r.DB.NewSnapshot()
+}
+
+func (r *RocksDB) getFromSnapshot(snapshot *gorocksdb.Snapshot, cfHandler *gorocksdb.ColumnFamilyHandle, key []byte) ([]byte, error) {
 	opt := gorocksdb.NewDefaultReadOptions()
 	defer opt.Destroy()
 	opt.SetSnapshot(snapshot)
-	slice, err := openchainDB.DB.GetCF(opt, cfHandler, key)
+	slice, err := r.DB.GetCF(opt, cfHandler, key)
 	if err != nil {
 		dbLogger.Errorf("Error while trying to retrieve key: %s", key)
 		return nil, err
@@ -209,18 +178,18 @@ func (openchainDB *RocksDB) getFromSnapshot(snapshot *gorocksdb.Snapshot, cfHand
 }
 
 // GetIterator returns an iterator for the given column family
-func (openchainDB *RocksDB) GetIterator(cfHandler *gorocksdb.ColumnFamilyHandle) *gorocksdb.Iterator {
+func (r *RocksDB) GetIterator(cfHandler *gorocksdb.ColumnFamilyHandle) *gorocksdb.Iterator {
 	opt := gorocksdb.NewDefaultReadOptions()
 	opt.SetFillCache(true)
 	defer opt.Destroy()
-	return openchainDB.DB.NewIteratorCF(opt, cfHandler)
+	return r.DB.NewIteratorCF(opt, cfHandler)
 }
 
-func (openchainDB *RocksDB) getSnapshotIterator(snapshot *gorocksdb.Snapshot, cfHandler *gorocksdb.ColumnFamilyHandle) *gorocksdb.Iterator {
+func (r *RocksDB) getSnapshotIterator(snapshot *gorocksdb.Snapshot, cfHandler *gorocksdb.ColumnFamilyHandle) *gorocksdb.Iterator {
 	opt := gorocksdb.NewDefaultReadOptions()
 	defer opt.Destroy()
 	opt.SetSnapshot(snapshot)
-	iter := openchainDB.DB.NewIteratorCF(opt, cfHandler)
+	iter := r.DB.NewIteratorCF(opt, cfHandler)
 	return iter
 }
 

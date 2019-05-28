@@ -17,7 +17,6 @@ limitations under the License.
 package sbft
 
 import (
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/db"
 	"strconv"
 	"sync"
 
@@ -29,7 +28,6 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/pkg/errors"
@@ -39,13 +37,12 @@ var once sync.Once
 
 // Consenter interface implementation for new main application
 type consenter struct {
-	cert            []byte
-	localMsp        string
-	config          *sb.ConsensusConfig
-	sbftStackConfig *localconfig.SbftLocal
-	backend         *backend.Backend
-	sbftPeers       map[string]*simplebft.SBFT
-	logger          *flogging.FabricLogger
+	cert       []byte
+	mspId      string
+	config     *sb.ConsensusConfig
+	sbftConfig *localconfig.SbftLocal
+	backend    *backend.Backend
+	logger     *flogging.FabricLogger
 }
 
 type chain struct {
@@ -61,10 +58,10 @@ type chain struct {
 func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consenter {
 	logger := flogging.MustGetLogger("orderer.consensus.sbft")
 	return &consenter{
-		cert:            srvConf.SecOpts.Certificate,
-		localMsp:        conf.General.LocalMSPDir,
-		sbftStackConfig: &conf.SbftLocal,
-		logger:          logger}
+		cert:       srvConf.SecOpts.Certificate,
+		mspId:      conf.General.LocalMSPDir,
+		sbftConfig: &conf.SbftLocal,
+		logger:     logger}
 }
 
 func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
@@ -92,23 +89,20 @@ func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb
 	}
 
 	if c.backend == nil {
-		conn, err := connection.New(c.sbftStackConfig.PeerCommAddr, c.sbftStackConfig.CertFile, c.sbftStackConfig.KeyFile)
+		conn, err := connection.New(c.sbftConfig.PeerCommAddr, c.sbftConfig.CertFile, c.sbftConfig.KeyFile)
 		if err != nil {
 			c.logger.Errorf("Error when trying to connect: %s", err)
 			panic(err)
 		}
 
-		pBackend, err := backend.NewBackend(c.config.Peers, conn, c.cert, c.localMsp)
+		pBackend, err := backend.NewBackend(c.config.Peers, conn, c.cert, c.mspId)
 		if err != nil {
 			c.logger.Errorf("Backend instantiation error: %v", err)
 			panic(err)
 		}
 		c.backend = pBackend
 	}
-	if c.sbftPeers == nil {
-		c.sbftPeers = make(map[string]*simplebft.SBFT)
-	}
-	c.sbftPeers[support.ChainID()] = initSbftPeer(c, support)
+	c.backend.InitSbftPeer(c.sbftConfig, c.config, support)
 
 	return &chain{
 		chainID:         support.ChainID(),
@@ -118,28 +112,19 @@ func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb
 	}, nil
 }
 
-func initSbftPeer(c *consenter, support consensus.ConsenterSupport) *simplebft.SBFT {
-	sbftPeer, err := c.backend.AddSbftPeer(c.sbftStackConfig.DataDir, support, c.config.Consensus)
-	if err != nil {
-		c.logger.Errorf("SBFT peer instantiation error.")
-		panic(err)
-	}
-	return sbftPeer
-}
-
 // Chain interface implementation:
 
 // Start allocates the necessary resources for staying up to date with this Chain.
 // It implements the multichain.Chain interface. It is called by multichain.NewManagerImpl()
 // which is invoked when the ordering process is launched, before the call to NewServer().
 func (ch *chain) Start() {
-	db.Start()
+	ch.backend.StartRocksDb(ch.chainID)
 	once.Do(ch.backend.StartAndConnectWorkers)
 }
 
 // Halt frees the resources which were allocated for this Chain
 func (ch *chain) Halt() {
-	db.Stop()
+	ch.backend.StopRocksDb(ch.chainID)
 	// panic("There is no way to halt SBFT")
 	select {
 	case <-ch.exitChan:
