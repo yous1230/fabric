@@ -18,13 +18,13 @@ package simplebft
 
 import (
 	"fmt"
-	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"math"
 	"reflect"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
