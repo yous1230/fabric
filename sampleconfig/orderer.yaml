@@ -384,11 +384,11 @@ Consensus:
 SbftLocal:
 
     # Address to use for SBFT internal communication
-    PeerCommAddr: ":6101"
-    CertFile: "sbft/testdata/cert1.pem"
-    KeyFile: "sbft/testdata/key.pem"
+    PeerCommAddr: :6101
+    CertFile: sbft/testdata/cert1.pem
+    KeyFile: sbft/testdata/key.pem
     # Directory for SBFT data (persistence)
-    DataDir: ""/var/hyperledger/production/orderer/rocksdb"
+    DataDir: /var/hyperledger/production/orderer/rocksdb
     # rocksdb configurations
     Db:
         MaxLogFileSize: 10485760

@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	cb "github.com/hyperledger/fabric/protos/common"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
 	"github.com/pkg/errors"
@@ -37,12 +38,13 @@ var once sync.Once
 
 // Consenter interface implementation for new main application
 type consenter struct {
-	cert       []byte
-	mspId      string
-	config     *sb.ConsensusConfig
-	sbftConfig *localconfig.SbftLocal
-	backend    *backend.Backend
-	logger     *flogging.FabricLogger
+	cert        []byte
+	mspId       string
+	config      *sb.ConsensusConfig
+	sbftConfig  *localconfig.SbftLocal
+	persistence *persist.Persist
+	backend     *backend.Backend
+	logger      *flogging.FabricLogger
 }
 
 type chain struct {
@@ -57,11 +59,15 @@ type chain struct {
 // into blocks before writing to the given ledger.
 func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consenter {
 	logger := flogging.MustGetLogger("orderer.consensus.sbft")
+	persistence := persist.New(conf.SbftLocal.DataDir, conf.SbftLocal.Db.LogLevel,
+		conf.SbftLocal.Db.MaxLogFileSize, conf.SbftLocal.Db.KeepLogFileNum)
+	persistence.Start()
 	return &consenter{
-		cert:       srvConf.SecOpts.Certificate,
-		mspId:      conf.General.LocalMSPDir,
-		sbftConfig: &conf.SbftLocal,
-		logger:     logger}
+		cert:        srvConf.SecOpts.Certificate,
+		mspId:       conf.General.LocalMSPDir,
+		sbftConfig:  &conf.SbftLocal,
+		persistence: persistence,
+		logger:      logger}
 }
 
 func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
@@ -102,7 +108,7 @@ func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb
 		}
 		c.backend = pBackend
 	}
-	c.backend.InitSbftPeer(c.sbftConfig, c.config, support)
+	c.backend.InitSbftPeer(c.persistence, c.config, support)
 
 	return &chain{
 		chainID:         support.ChainID(),
@@ -118,13 +124,11 @@ func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb
 // It implements the multichain.Chain interface. It is called by multichain.NewManagerImpl()
 // which is invoked when the ordering process is launched, before the call to NewServer().
 func (ch *chain) Start() {
-	ch.backend.StartRocksDb(ch.chainID)
 	once.Do(ch.backend.StartAndConnectWorkers)
 }
 
 // Halt frees the resources which were allocated for this Chain
 func (ch *chain) Halt() {
-	ch.backend.StopRocksDb(ch.chainID)
 	// panic("There is no way to halt SBFT")
 	select {
 	case <-ch.exitChan:

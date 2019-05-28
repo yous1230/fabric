@@ -37,10 +37,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
 	cry "github.com/hyperledger/fabric/orderer/consensus/sbft/crypto"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
@@ -158,9 +158,9 @@ func NewBackend(peers map[string]*sb.Consenter, conn *connection.Manager, tlsCer
 }
 
 // InitSbftPeer create a new SBFT peer for the given chainId using the given support and configuration
-func (b *Backend) InitSbftPeer(sc *localconfig.SbftLocal, cc *sb.ConsensusConfig, support consensus.ConsenterSupport) {
+func (b *Backend) InitSbftPeer(persistence *persist.Persist, cc *sb.ConsensusConfig, support consensus.ConsenterSupport) {
 	b.supports[support.ChainID()] = support
-	sbftPeer, err := simplebft.New(b.GetMyId(), sc, support, cc.Consensus, b)
+	sbftPeer, err := simplebft.New(b.GetMyId(), persistence, support, cc.Consensus, b)
 	if err != nil {
 		b.logger.Errorf("SBFT peer instantiation error.")
 		panic(err)
@@ -508,14 +508,6 @@ func (b *Backend) StartAndConnectWorkers() {
 	}
 
 	go b.run()
-}
-
-func (b *Backend) StartRocksDb(chainId string) {
-	b.sbftPeers[chainId].StartRocksDb()
-}
-
-func (b *Backend) StopRocksDb(chainId string) {
-	b.sbftPeers[chainId].StopRocksDb()
 }
 
 // Sign signs a given data

@@ -24,7 +24,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/flogging"
-	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
@@ -109,17 +108,18 @@ type dummyCanceller struct{}
 func (d dummyCanceller) Cancel() {}
 
 // New creates a new SBFT instance.
-func New(id uint64, sc *localconfig.SbftLocal, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
+func New(id uint64, persistence *persist.Persist, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
 	chainID := support.ChainID()
 	if config.F*3+1 > config.N {
 		return nil, fmt.Errorf("invalid combination of N (%d) and F (%d)", config.N, config.F)
 	}
+	logger := flogging.MustGetLogger("orderer.consensus.sbft.simplebft")
 
 	s := &SBFT{
 		sys:             sys,
 		support:         support,
-		logger:          flogging.MustGetLogger("orderer.consensus.sbft.simplebft"),
-		persistence:     persist.New(sc.DataDir, sc.Db.LogLevel, sc.Db.MaxLogFileSize, sc.Db.KeepLogFileNum),
+		logger:          logger,
+		persistence:     persistence,
 		config:          *config,
 		id:              id,
 		chainId:         chainID,
@@ -277,15 +277,9 @@ func (s *SBFT) handleQueueableMessage(m *sb.Msg, src uint64) {
 }
 
 func (s *SBFT) deliverBatch(batch *sb.Batch) {
-	//if committers == nil {
-	//	logger.Warningf("replica %d: commiter is nil", s.id)
-	//	panic("Committer is nil.")
-	//}
 	s.cur.checkpointDone = true
 	s.cur.timeout.Cancel()
-	// s.primarycommitters[0]
 	s.sys.Deliver(s.chainId, batch)
-	// s.primarycommitters = s.primarycommitters[1:]
 
 	for _, req := range batch.Payloads {
 		key := hash2str(hash(req))
@@ -296,13 +290,6 @@ func (s *SBFT) deliverBatch(batch *sb.Batch) {
 }
 
 ////////////////////////////////////////////////
-func (s *SBFT) StartRocksDb() {
-	s.persistence.Start()
-}
-
-func (s *SBFT) StopRocksDb() {
-	s.persistence.Stop()
-}
 
 // Persist persists data identified by a chainId and a key
 func (s *SBFT) Persist(chainId string, key string, data proto.Message) {
@@ -326,7 +313,12 @@ func (s *SBFT) Restore(chainId string, key string, out proto.Message) bool {
 		return false
 	}
 	err = proto.Unmarshal(val, out)
-	return err == nil
+	if err != nil {
+		return false
+	} else if len(val) == 0 {
+		return false
+	}
+	return true
 }
 
 // Delete persisted data identified by chainId and key
