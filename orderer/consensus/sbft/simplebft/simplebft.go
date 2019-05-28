@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/orderer/consensus"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/storage"
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
-	"github.com/op/go-logging"
 )
 
 const preprepared string = "preprepared"
@@ -48,8 +48,6 @@ type System interface {
 	Timer(d time.Duration, f func()) Canceller
 	Deliver(chainId string, batch *sb.Batch)
 	AddReceiver(chainId string, receiver Receiver)
-	Persist(chainId string, key string, data proto.Message)
-	Restore(chainId string, key string, out proto.Message) bool
 	LastBatch(chainId string) *sb.Batch
 	Sign(data []byte) []byte
 	CheckSig(data []byte, src uint64, sig []byte) error
@@ -65,9 +63,10 @@ type Canceller interface {
 
 // SBFT is a simplified PBFT implementation.
 type SBFT struct {
-	sys     System
-	support consensus.ConsenterSupport
-	storage *storage.SbftStorage
+	sys         System
+	support     consensus.ConsenterSupport
+	logger      *flogging.FabricLogger
+	persistence *persist.Persist
 
 	config            sb.Options
 	id                uint64
@@ -104,22 +103,23 @@ type replicaInfo struct {
 	viewchange       *sb.ViewChange
 }
 
-var logger = logging.MustGetLogger("orderer.consensus.sbft.simplebft")
-
 type dummyCanceller struct{}
 
 func (d dummyCanceller) Cancel() {}
 
 // New creates a new SBFT instance.
-func New(id uint64, chainID string, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
+func New(id uint64, dataDir string, support consensus.ConsenterSupport, config *sb.Options, sys System) (*SBFT, error) {
+	chainID := support.ChainID()
 	if config.F*3+1 > config.N {
 		return nil, fmt.Errorf("invalid combination of N (%d) and F (%d)", config.N, config.F)
 	}
 
 	s := &SBFT{
-		config:          *config,
 		sys:             sys,
 		support:         support,
+		logger:          flogging.MustGetLogger("orderer.consensus.sbft.simplebft"),
+		persistence:     &persist.Persist{},
+		config:          *config,
 		id:              id,
 		chainId:         chainID,
 		viewChangeTimer: dummyCanceller{},
@@ -139,7 +139,7 @@ func New(id uint64, chainID string, support consensus.ConsenterSupport, config *
 	s.activeView = true
 
 	svc := &sb.Signed{}
-	if s.sys.Restore(s.chainId, viewchange, svc) {
+	if s.Restore(s.chainId, viewchange, svc) {
 		vc := &sb.ViewChange{}
 		err := proto.Unmarshal(svc.Data, vc)
 		if err != nil {
@@ -152,7 +152,7 @@ func New(id uint64, chainID string, support consensus.ConsenterSupport, config *
 	}
 
 	pp := &sb.Preprepare{}
-	if s.sys.Restore(s.chainId, preprepared, pp) && pp.Seq.View >= s.view {
+	if s.Restore(s.chainId, preprepared, pp) && pp.Seq.View >= s.view {
 		s.view = pp.Seq.View
 		s.activeView = true
 		if pp.Seq.Seq > s.seq() {
@@ -162,11 +162,11 @@ func New(id uint64, chainID string, support consensus.ConsenterSupport, config *
 		}
 	}
 	c := &sb.Subject{}
-	if s.sys.Restore(s.chainId, prepared, c) && reflect.DeepEqual(c, &s.cur.subject) && c.Seq.View >= s.view {
+	if s.Restore(s.chainId, prepared, c) && reflect.DeepEqual(c, &s.cur.subject) && c.Seq.View >= s.view {
 		s.cur.prepared = true
 	}
 	ex := &sb.Subject{}
-	if s.sys.Restore(s.chainId, committed, ex) && reflect.DeepEqual(c, &s.cur.subject) && ex.Seq.View >= s.view {
+	if s.Restore(s.chainId, committed, ex) && reflect.DeepEqual(c, &s.cur.subject) && ex.Seq.View >= s.view {
 		s.cur.committed = true
 	}
 
@@ -232,7 +232,7 @@ func (s *SBFT) broadcast(m *sb.Msg) {
 
 // Receive is the ingress method for SBFT messages.
 func (s *SBFT) Receive(m *sb.Msg, src uint64) {
-	logger.Debugf("replica %d: received message from %d: %s", s.id, src, m.Type)
+	s.logger.Debugf("replica %d: received message from %d: %s", s.id, src, m.Type)
 
 	if h := m.GetHello(); h != nil {
 		s.handleHello(h, src)
@@ -249,7 +249,7 @@ func (s *SBFT) Receive(m *sb.Msg, src uint64) {
 	}
 
 	if s.testBacklogMessage(m, src) {
-		logger.Debugf("replica %d: message for future seq, storing for later", s.id)
+		s.logger.Debugf("replica %d: message for future seq, storing for later", s.id)
 		s.recordBacklogMsg(m, src)
 		return
 	}
@@ -272,7 +272,7 @@ func (s *SBFT) handleQueueableMessage(m *sb.Msg, src uint64) {
 		return
 	}
 
-	logger.Warningf("replica %d: received invalid message from %d", s.id, src)
+	s.logger.Warningf("replica %d: received invalid message from %d", s.id, src)
 }
 
 func (s *SBFT) deliverBatch(batch *sb.Batch) {
@@ -288,8 +288,41 @@ func (s *SBFT) deliverBatch(batch *sb.Batch) {
 
 	for _, req := range batch.Payloads {
 		key := hash2str(hash(req))
-		logger.Infof("replica %d: attempting to remove %x from pending", s.id, key)
+		s.logger.Infof("replica %d: attempting to remove %x from pending", s.id, key)
 		delete(s.pending, key)
 		delete(s.validated, key)
 	}
+}
+
+////////////////////////////////////////////////
+
+// Persist persists data identified by a chainId and a key
+func (s *SBFT) Persist(chainId string, key string, data proto.Message) {
+	compk := fmt.Sprintf("%s-%s", chainId, key)
+	if data == nil {
+		s.persistence.DelState(compk)
+	} else {
+		bytes, err := proto.Marshal(data)
+		if err != nil {
+			panic(err)
+		}
+		s.persistence.StoreState(compk, bytes)
+	}
+}
+
+// Restore loads persisted data identified by chainId and key
+func (s *SBFT) Restore(chainId string, key string, out proto.Message) bool {
+	compk := fmt.Sprintf("%s-%s", chainId, key)
+	val, err := s.persistence.ReadState(compk)
+	if err != nil {
+		return false
+	}
+	err = proto.Unmarshal(val, out)
+	return err == nil
+}
+
+// Delete persisted data identified by chainId and key
+func (s *SBFT) Delete(chainId string, key string) {
+	compk := fmt.Sprintf("%s-%s", chainId, key)
+	s.persistence.DelState(compk)
 }

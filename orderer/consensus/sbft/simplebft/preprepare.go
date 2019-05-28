@@ -27,7 +27,7 @@ func (s *SBFT) sendPreprepare(batch []*sb.Request) {
 	seq := s.nextSeq()
 
 	if len(batch) != 1 {
-		logger.Panicf("replica %d: sendPreprepare batch length %d", s.id, len(batch))
+		s.logger.Panicf("replica %d: sendPreprepare batch length %d", s.id, len(batch))
 	}
 
 	data := make([][]byte, len(batch))
@@ -42,44 +42,44 @@ func (s *SBFT) sendPreprepare(batch []*sb.Request) {
 		Batch: s.makeBatch(seq.Seq, lasthash, data),
 	}
 
-	s.sys.Persist(s.chainId, preprepared, m)
+	s.Persist(s.chainId, preprepared, m)
 	s.broadcast(&sb.Msg{Type: &sb.Msg_Preprepare{Preprepare: m}})
-	logger.Infof("replica %d: sendPreprepare", s.id)
+	s.logger.Infof("replica %d: sendPreprepare", s.id)
 	s.handleCheckedPreprepare(m)
 }
 
 func (s *SBFT) handlePreprepare(pp *sb.Preprepare, src uint64) {
 	if src == s.id {
-		logger.Infof("replica %d: ignoring preprepare from self: %d", s.id, src)
+		s.logger.Infof("replica %d: ignoring preprepare from self: %d", s.id, src)
 		return
 	}
 	if src != s.primaryID() {
-		logger.Infof("replica %d: preprepare from non-primary %d", s.id, src)
+		s.logger.Infof("replica %d: preprepare from non-primary %d", s.id, src)
 		return
 	}
 	nextSeq := s.nextSeq()
 	if (*pp.Seq).Seq != nextSeq.Seq || (*pp.Seq).View != nextSeq.View {
-		logger.Infof("replica %d: preprepare does not match expected %v, got %v", s.id, nextSeq, *pp.Seq)
+		s.logger.Infof("replica %d: preprepare does not match expected %v, got %v", s.id, nextSeq, *pp.Seq)
 		return
 	}
 	if s.cur.subject.Seq.Seq == pp.Seq.Seq {
-		logger.Infof("replica %d: duplicate preprepare for %v", s.id, *pp.Seq)
+		s.logger.Infof("replica %d: duplicate preprepare for %v", s.id, *pp.Seq)
 		return
 	}
 	if pp.GetBatch() == nil {
-		logger.Infof("replica %d: preprepare without blocks", s.id)
+		s.logger.Infof("replica %d: preprepare without blocks", s.id)
 		return
 	}
 
 	batchheader, err := s.checkBatch(pp.Batch, true, false)
 	if err != nil || batchheader.Seq != pp.Seq.Seq {
-		logger.Infof("replica %d: preprepare %v blocks head inconsistent from %d: %s", s.id, pp.Seq, src, err)
+		s.logger.Infof("replica %d: preprepare %v blocks head inconsistent from %d: %s", s.id, pp.Seq, src, err)
 		return
 	}
 
 	prevhash := s.sys.LastBatch(s.chainId).Hash()
 	if !bytes.Equal(batchheader.PrevHash, prevhash) {
-		logger.Infof("replica %d: preprepare blocks prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
+		s.logger.Infof("replica %d: preprepare blocks prev hash does not match expected %s, got %s", s.id, hash2str(batchheader.PrevHash), hash2str(prevhash))
 		return
 	}
 
@@ -89,15 +89,15 @@ func (s *SBFT) handlePreprepare(pp *sb.Preprepare, src uint64) {
 	//	s.sendViewChange()
 	//	return
 	//}
-	logger.Infof("replica %d: handlePrepare", s.id)
+	s.logger.Infof("replica %d: handlePrepare", s.id)
 	s.handleCheckedPreprepare(pp)
 }
 
 func (s *SBFT) acceptPreprepare(pp *sb.Preprepare) {
 	sub := sb.Subject{Seq: pp.Seq, Digest: pp.Batch.Hash()}
 
-	logger.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
-	s.sys.Persist(s.chainId, preprepared, pp)
+	s.logger.Infof("replica %d: accepting preprepare for %v, %x", s.id, sub.Seq, sub.Digest)
+	s.Persist(s.chainId, preprepared, pp)
 
 	s.cur = reqInfo{
 		subject:    sub,
@@ -122,6 +122,6 @@ func (s *SBFT) handleCheckedPreprepare(pp *sb.Preprepare) {
 ////////////////////////////////////////////////
 
 func (s *SBFT) requestTimeout() {
-	logger.Infof("replica %d: request timed out: %s", s.id, s.cur.subject.Seq)
+	s.logger.Infof("replica %d: request timed out: %s", s.id, s.cur.subject.Seq)
 	s.sendViewChange()
 }

@@ -225,8 +225,14 @@ type SbftLocal struct {
 	PeerCommAddr string
 	CertFile     string
 	KeyFile      string
-	WALDir       string
-	SnapDir      string
+	DataDir      string
+	Db           SbftDB
+}
+
+type SbftDB struct {
+	MaxLogFileSize uint64
+	KeepLogFileNum uint32
+	LogLevel       string
 }
 
 // SbftShared contains config for the SBFT network.
@@ -330,8 +336,12 @@ var Defaults = TopLevel{
 		PeerCommAddr: ":6101",
 		CertFile:     "sbft/testdata/cert1.pem",
 		KeyFile:      "sbft/testdata/key.pem",
-		WALDir:       "/var/hyperledger/production/orderer/sbft/wal",
-		SnapDir:      "/var/hyperledger/production/orderer/sbft/snapshot",
+		DataDir:      "/var/hyperledger/production/orderer/rocksdb",
+		Db: SbftDB{
+			MaxLogFileSize: 10485760,
+			KeepLogFileNum: 10,
+			LogLevel:       "warn",
+		},
 	},
 }
 

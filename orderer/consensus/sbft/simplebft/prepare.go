@@ -33,11 +33,11 @@ func (s *SBFT) handlePrepare(p *sb.Subject, src uint64) {
 	}
 
 	if !proto.Equal(p, &s.cur.subject) {
-		logger.Infof("replica %d: prepare does not match expected subject %v, got %v", s.id, &s.cur.subject, p)
+		s.logger.Infof("replica %d: prepare does not match expected subject %v, got %v", s.id, &s.cur.subject, p)
 		return
 	}
 	if _, ok := s.cur.prep[src]; ok {
-		logger.Infof("replica %d: duplicate prepare for %v from %d", s.id, *p.Seq, src)
+		s.logger.Infof("replica %d: duplicate prepare for %v from %d", s.id, *p.Seq, src)
 		return
 	}
 	s.cur.prep[src] = p

@@ -41,7 +41,7 @@ func (s *SBFT) makeXset(vcs []*sb.ViewChange) (*sb.Subject, *sb.Batch, bool) {
 	}
 
 	next := best.DecodeHeader().Seq + 1
-	logger.Debugf("replica %d: xset starts at commit %d", s.id, next)
+	s.logger.Debugf("replica %d: xset starts at commit %d", s.id, next)
 
 	// now determine which request could have executed for best+1
 	var xset *sb.Subject
@@ -54,7 +54,7 @@ nextm:
 		notfound := true
 		// which has <n,d,v> in its Pset
 		for _, mtuple := range m.Pset {
-			logger.Debugf("replica %d: trying %v", s.id, mtuple)
+			s.logger.Debugf("replica %d: trying %v", s.id, mtuple)
 			if mtuple.Seq.Seq < next {
 				continue
 			}
@@ -72,7 +72,7 @@ nextm:
 				}
 				// and all <n,d',v'> in its Pset
 				for _, mptuple := range mp.Pset {
-					logger.Debugf("replica %d: matching %v", s.id, mptuple)
+					s.logger.Debugf("replica %d: matching %v", s.id, mptuple)
 					if mptuple.Seq.Seq != mtuple.Seq.Seq {
 						continue
 					}
@@ -90,7 +90,7 @@ nextm:
 			if count < s.viewChangeQuorum() {
 				continue
 			}
-			logger.Debugf("replica %d: found %d replicas for Pset %d/%d", s.id, count, mtuple.Seq.Seq, mtuple.Seq.View)
+			s.logger.Debugf("replica %d: found %d replicas for Pset %d/%d", s.id, count, mtuple.Seq.Seq, mtuple.Seq.View)
 
 			// A2. f+1 messages mp from S
 			count = 0
@@ -115,9 +115,9 @@ nextm:
 			if count < s.oneCorrectQuorum() {
 				continue
 			}
-			logger.Debugf("replica %d: found %d replicas for Qset %d", s.id, count, mtuple.Seq.Seq)
+			s.logger.Debugf("replica %d: found %d replicas for Qset %d", s.id, count, mtuple.Seq.Seq)
 
-			logger.Debugf("replica %d: selecting %d with %x", s.id, next, mtuple.Digest)
+			s.logger.Debugf("replica %d: selecting %d with %x", s.id, next, mtuple.Digest)
 			xset = &sb.Subject{
 				Seq:    &sb.SeqView{Seq: next, View: s.view},
 				Digest: mtuple.Digest,
@@ -133,7 +133,7 @@ nextm:
 	// B. otherwise select null request
 	// We actually don't select a null request, but report the most recent blocks instead.
 	if emptycount >= s.viewChangeQuorum() {
-		logger.Debugf("replica %d: no pertinent requests found for %d", s.id, next)
+		s.logger.Debugf("replica %d: no pertinent requests found for %d", s.id, next)
 		return nil, best, true
 	}
 

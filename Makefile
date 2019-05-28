@@ -65,7 +65,7 @@ EXTRA_VERSION ?= $(shell git rev-parse --short HEAD)
 PROJECT_VERSION=$(BASE_VERSION)-snapshot-$(EXTRA_VERSION)
 
 PKGNAME = github.com/$(PROJECT_NAME)
-CGO_FLAGS = CGO_CFLAGS=" "
+CGO_FLAGS = CGO_CFLAGS=" " CGO_LDFLAGS="-L/usr/local/lib -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy"
 ARCH=$(shell go env GOARCH)
 MARCH=$(shell go env GOOS)-$(shell go env GOARCH)
 

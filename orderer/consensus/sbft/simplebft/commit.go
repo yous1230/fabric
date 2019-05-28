@@ -32,7 +32,7 @@ func (s *SBFT) maybeSendCommit() {
 func (s *SBFT) sendCommit() {
 	s.cur.prepared = true
 	c := s.cur.subject
-	s.sys.Persist(s.chainId, prepared, &c)
+	s.Persist(s.chainId, prepared, &c)
 	s.broadcast(&sb.Msg{Type: &sb.Msg_Commit{Commit: &c}})
 }
 
@@ -43,12 +43,12 @@ func (s *SBFT) handleCommit(c *sb.Subject, src uint64) {
 	}
 
 	if !proto.Equal(c, &s.cur.subject) {
-		logger.Warningf("replica %d: commit does not match expected subject %v %x, got %v %x",
+		s.logger.Warningf("replica %d: commit does not match expected subject %v %x, got %v %x",
 			s.id, s.cur.subject.Seq, s.cur.subject.Digest, c.Seq, c.Digest)
 		return
 	}
 	if _, ok := s.cur.commit[src]; ok {
-		logger.Infof("replica %d: duplicate commit for %v from %d", s.id, *c.Seq, src)
+		s.logger.Infof("replica %d: duplicate commit for %v from %d", s.id, *c.Seq, src)
 		return
 	}
 	s.cur.commit[src] = c
@@ -59,9 +59,9 @@ func (s *SBFT) handleCommit(c *sb.Subject, src uint64) {
 		return
 	}
 	s.cur.committed = true
-	logger.Noticef("replica %d: executing %v %x", s.id, s.cur.subject.Seq, s.cur.subject.Digest)
+	s.logger.Noticef("replica %d: executing %v %x", s.id, s.cur.subject.Seq, s.cur.subject.Digest)
 
-	s.sys.Persist(s.chainId, committed, &s.cur.subject)
+	s.Persist(s.chainId, committed, &s.cur.subject)
 
 	s.sendCheckpoint()
 	s.processBacklog()

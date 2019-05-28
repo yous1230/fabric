@@ -22,16 +22,16 @@ import (
 
 // Request proposes a new request to the BFT network.ls
 func (s *SBFT) Request(req []byte) {
-	logger.Infof("Replica %d: broadcasting a request", s.id)
+	s.logger.Infof("Replica %d: broadcasting a request", s.id)
 	s.broadcast(&sb.Msg{Type: &sb.Msg_Request{Request: &sb.Request{Payload: req}}})
 }
 
 func (s *SBFT) handleRequest(req *sb.Request, src uint64) {
-	logger.Infof("Replica %d: inserting request", s.id)
+	s.logger.Infof("Replica %d: inserting request", s.id)
 	if s.isPrimary() && s.activeView {
 		blocks, valid := s.sys.Validate(s.chainId, req)
 		if !valid {
-			logger.Errorf("Validate request invalid")
+			s.logger.Errorf("Validate request invalid")
 			// this one is problematic, lets skip it
 			//delete(s.pending, key)
 			return
@@ -41,7 +41,7 @@ func (s *SBFT) handleRequest(req *sb.Request, src uint64) {
 		} else {
 			for _, v := range blocks {
 				key := hash2str(hash(v[0].Payload))
-				logger.Infof("Replica %d: inserting %x into pending", s.id, key)
+				s.logger.Infof("Replica %d: inserting %x into pending", s.id, key)
 				s.pending[key] = v[0]
 				s.validated[key] = valid
 			}
@@ -97,7 +97,7 @@ func (s *SBFT) maybeSendNextBatch() {
 				batches, valid := s.sys.Validate(s.chainId, req)
 				s.blocks = append(s.blocks, batches...)
 				if !valid {
-					logger.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
+					s.logger.Panicf("Replica %d: one of our own pending requests is erroneous.", s.id)
 					delete(s.pending, k)
 					continue
 				}
@@ -118,6 +118,6 @@ func (s *SBFT) maybeSendNextBatch() {
 
 	block := s.blocks[0]
 	s.blocks = s.blocks[1:]
-	logger.Infof("Send Preprepare for chainId: %s", s.chainId)
+	s.logger.Infof("Send Preprepare for chainId: %s", s.chainId)
 	s.sendPreprepare(block)
 }

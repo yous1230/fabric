@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+		 http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,59 +16,43 @@ limitations under the License.
 
 package persist
 
-import (
-	"io/ioutil"
-	"os"
-	"strings"
-)
+import "github.com/hyperledger/fabric/orderer/consensus/sbft/db"
 
-type Persist struct {
-	dir string
+// Persist provides an abstraction to access the Persist column family
+// in the database.
+type Persist struct{}
+
+// StoreState stores a key,value pair
+func (h *Persist) StoreState(key string, value []byte) error {
+	db := db.GetDBHandle()
+	return db.Put(db.PersistCF, []byte("consensus."+key), value)
 }
 
-func New(dir string) *Persist {
-	p := &Persist{
-		dir: dir,
+// DelState removes a key,value pair
+func (h *Persist) DelState(key string) {
+	db := db.GetDBHandle()
+	db.Delete(db.PersistCF, []byte("consensus."+key))
+}
+
+// ReadState retrieves a value to a key
+func (h *Persist) ReadState(key string) ([]byte, error) {
+	db := db.GetDBHandle()
+	return db.Get(db.PersistCF, []byte("consensus."+key))
+}
+
+// ReadStateSet retrieves all key,value pairs where the key starts with prefix
+func (h *Persist) ReadStateSet(prefix string) (map[string][]byte, error) {
+	db := db.GetDBHandle()
+	prefixRaw := []byte("consensus." + prefix)
+
+	ret := make(map[string][]byte)
+	it := db.GetIterator(db.PersistCF)
+	defer it.Close()
+	for it.Seek(prefixRaw); it.ValidForPrefix(prefixRaw); it.Next() {
+		key := string(it.Key().Data())
+		key = key[len("consensus."):]
+		// copy data from the slice!
+		ret[key] = append([]byte(nil), it.Value().Data()...)
 	}
-	os.MkdirAll(dir, 0755)
-	return p
-}
-
-func (p *Persist) path(key string) string {
-	return p.dir + "/" + key
-}
-
-//
-func (p *Persist) StoreState(key string, value []byte) error {
-	return ioutil.WriteFile(p.path(key), value, 0640)
-}
-
-func (p *Persist) ReadState(key string) ([]byte, error) {
-	return ioutil.ReadFile(p.path(key))
-}
-
-func (p *Persist) ReadStateSet(prefix string) (map[string][]byte, error) {
-	files, err := ioutil.ReadDir(p.dir)
-	if err != nil {
-		return nil, err
-	}
-	r := make(map[string][]byte)
-	for _, fi := range files {
-		if fi.Mode()&os.ModeType != 0 {
-			continue
-		}
-		if strings.Index(fi.Name(), prefix) != 0 {
-			continue
-		}
-		data, err := ioutil.ReadFile(p.path(fi.Name()))
-		if err != nil {
-			return nil, err
-		}
-		r[fi.Name()] = data
-	}
-	return r, nil
-}
-
-func (p *Persist) DelState(key string) {
-	os.Remove(p.path(key))
+	return ret, nil
 }

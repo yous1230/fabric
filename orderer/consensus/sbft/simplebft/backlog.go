@@ -56,7 +56,7 @@ func (s *SBFT) recordBacklogMsg(m *sb.Msg, src uint64) {
 	s.replicaState[src].backLog = append(s.replicaState[src].backLog, m)
 
 	if len(s.replicaState[src].backLog) > maxBacklogSeq*msgPerSeq {
-		logger.Debugf("replica %d: backlog for %d full, discarding and reconnecting", s.id, src)
+		s.logger.Debugf("replica %d: backlog for %d full, discarding and reconnecting", s.id, src)
 		s.discardBacklog(src)
 		s.sys.Reconnect(s.chainId, src)
 	}
@@ -82,7 +82,7 @@ func (s *SBFT) processBacklog() {
 				}
 				state.backLog = rest
 
-				logger.Debugf("replica %d: processing stored message from %d: %s", s.id, src, m)
+				s.logger.Debugf("replica %d: processing stored message from %d: %s", s.id, src, m)
 
 				s.handleQueueableMessage(m, src)
 				processed = true

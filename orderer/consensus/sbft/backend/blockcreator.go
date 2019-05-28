@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package backend
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	cb "github.com/hyperledger/fabric/protos/common"
 )
@@ -27,7 +28,7 @@ func (bc *blockCreator) createNextBlock(envs []*cb.Envelope) *cb.Block {
 	for i, env := range envs {
 		data.Data[i], err = proto.Marshal(env)
 		if err != nil {
-			logger.Panicf("Could not marshal envelope: %s", err)
+			panic(fmt.Sprintf("Could not marshal envelope: %s", err))
 		}
 	}
 

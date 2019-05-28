@@ -32,7 +32,7 @@ func (s *SBFT) sendViewChange() {
 			state.viewchange = nil
 		}
 	}
-	logger.Noticef("replica %d: sending viewchange for view %d", s.id, s.view)
+	s.logger.Noticef("replica %d: sending viewchange for view %d", s.id, s.view)
 
 	var q, p []*sb.Subject
 	if s.cur.prepared {
@@ -56,7 +56,7 @@ func (s *SBFT) sendViewChange() {
 	s.viewChangeTimer.Cancel()
 	s.cur.timeout.Cancel()
 
-	s.sys.Persist(s.chainId, viewchange, svc)
+	s.Persist(s.chainId, viewchange, svc)
 	s.broadcast(&sb.Msg{Type: &sb.Msg_ViewChange{ViewChange: svc}})
 }
 
@@ -72,19 +72,19 @@ func (s *SBFT) handleViewChange(svc *sb.Signed, src uint64) {
 		_, err = s.checkBatch(vc.Checkpoint, false, true)
 	}
 	if err != nil {
-		logger.Noticef("replica %d: invalid viewchange: %s", s.id, err)
+		s.logger.Noticef("replica %d: invalid viewchange: %s", s.id, err)
 		return
 	}
 	if vc.View < s.view {
-		logger.Debugf("replica %d: old view change from %d for view %d, we are in view %d", s.id, src, vc.View, s.view)
+		s.logger.Debugf("replica %d: old view change from %d for view %d, we are in view %d", s.id, src, vc.View, s.view)
 		return
 	}
 	if ovc := s.replicaState[src].viewchange; ovc != nil && vc.View <= ovc.View {
-		logger.Noticef("replica %d: duplicate view change for %d from %d", s.id, vc.View, src)
+		s.logger.Noticef("replica %d: duplicate view change for %d from %d", s.id, vc.View, src)
 		return
 	}
 
-	logger.Infof("replica %d: viewchange from %d: %v", s.id, src, vc)
+	s.logger.Infof("replica %d: viewchange from %d: %v", s.id, src, vc)
 	s.replicaState[src].viewchange = vc
 	s.replicaState[src].signedViewchange = svc
 
@@ -109,7 +109,7 @@ func (s *SBFT) handleViewChange(svc *sb.Signed, src uint64) {
 	if quorum == s.oneCorrectQuorum() {
 		// catch up to the minimum view
 		if s.view < min {
-			logger.Noticef("replica %d: we are behind on view change, resending for newer view", s.id)
+			s.logger.Noticef("replica %d: we are behind on view change, resending for newer view", s.id)
 			s.view = min - 1
 			s.sendViewChange()
 			return
@@ -117,10 +117,10 @@ func (s *SBFT) handleViewChange(svc *sb.Signed, src uint64) {
 	}
 
 	if quorum == s.viewChangeQuorum() {
-		logger.Noticef("replica %d: received view change quorum, starting view change timer", s.id)
+		s.logger.Noticef("replica %d: received view change quorum, starting view change timer", s.id)
 		s.viewChangeTimer = s.sys.Timer(s.viewChangeTimeout, func() {
 			s.viewChangeTimeout *= 2
-			logger.Noticef("replica %d: view change timed out, sending next", s.id)
+			s.logger.Noticef("replica %d: view change timed out, sending next", s.id)
 			s.sendViewChange()
 		})
 	}

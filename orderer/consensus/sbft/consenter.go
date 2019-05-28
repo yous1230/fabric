@@ -17,44 +17,41 @@ limitations under the License.
 package sbft
 
 import (
+	"github.com/hyperledger/fabric/orderer/consensus/sbft/db"
+	"strconv"
+	"sync"
+
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/comm"
 	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/migration"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/backend"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/connection"
-	"github.com/hyperledger/fabric/orderer/consensus/sbft/persist"
 	"github.com/hyperledger/fabric/orderer/consensus/sbft/simplebft"
 	cb "github.com/hyperledger/fabric/protos/common"
 	sb "github.com/hyperledger/fabric/protos/orderer/sbft"
-	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"strconv"
-	"sync"
 )
 
-type consensusStack struct {
-	persist *persist.Persist
-	backend *backend.Backend
-}
-
-var logger = logging.MustGetLogger("orderer/consensus/sbft")
 var once sync.Once
+
 // Consenter interface implementation for new main application
 type consenter struct {
 	cert            []byte
 	localMsp        string
 	config          *sb.ConsensusConfig
-	consensusStack  *consensusStack
-	sbftStackConfig *backend.StackConfig
+	sbftStackConfig *localconfig.SbftLocal
+	backend         *backend.Backend
 	sbftPeers       map[string]*simplebft.SBFT
+	logger          *flogging.FabricLogger
 }
 
 type chain struct {
 	chainID         string
 	exitChan        chan struct{}
-	consensusStack  *consensusStack
+	backend         *backend.Backend
 	migrationStatus migration.Status
 }
 
@@ -62,17 +59,16 @@ type chain struct {
 // It accepts messages being delivered via Enqueue, orders them, and then uses the blockcutter to form the messages
 // into blocks before writing to the given ledger.
 func New(conf *localconfig.TopLevel, srvConf comm.ServerConfig) consensus.Consenter {
-	sc := &backend.StackConfig{ListenAddr: conf.SbftLocal.PeerCommAddr,
-		CertFile: conf.SbftLocal.CertFile,
-		KeyFile:  conf.SbftLocal.KeyFile,
-		WALDir:   conf.SbftLocal.WALDir,
-		SnapDir:  conf.SbftLocal.SnapDir}
-
-	return &consenter{cert: srvConf.SecOpts.Certificate, localMsp: conf.General.LocalMSPDir, sbftStackConfig: sc}
+	logger := flogging.MustGetLogger("orderer.consensus.sbft")
+	return &consenter{
+		cert:            srvConf.SecOpts.Certificate,
+		localMsp:        conf.General.LocalMSPDir,
+		sbftStackConfig: &conf.SbftLocal,
+		logger:          logger}
 }
 
-func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
-	logger.Infof("Starting a chain: %d", support.ChainID())
+func (c *consenter) HandleChain(support consensus.ConsenterSupport, metadata *cb.Metadata) (consensus.Chain, error) {
+	c.logger.Infof("Starting a chain: %d", support.ChainID())
 
 	m := &sb.ConfigMetadata{}
 	if err := proto.Unmarshal(support.SharedConfig().ConsensusMetadata(), m); err != nil {
@@ -90,48 +86,42 @@ func (sbft *consenter) HandleChain(support consensus.ConsenterSupport, metadata 
 		peers[endpoint] = consenter
 	}
 
-	sbft.config = &sb.ConsensusConfig{
+	c.config = &sb.ConsensusConfig{
 		Consensus: m.Options,
 		Peers:     peers,
 	}
 
-	if sbft.sbftPeers == nil {
-		sbft.consensusStack = createConsensusStack(sbft)
-		sbft.sbftPeers = make(map[string]*simplebft.SBFT)
+	if c.backend == nil {
+		conn, err := connection.New(c.sbftStackConfig.PeerCommAddr, c.sbftStackConfig.CertFile, c.sbftStackConfig.KeyFile)
+		if err != nil {
+			c.logger.Errorf("Error when trying to connect: %s", err)
+			panic(err)
+		}
+
+		pBackend, err := backend.NewBackend(c.config.Peers, conn, c.cert, c.localMsp)
+		if err != nil {
+			c.logger.Errorf("Backend instantiation error: %v", err)
+			panic(err)
+		}
+		c.backend = pBackend
 	}
-	sbft.sbftPeers[support.ChainID()] = initSbftPeer(sbft, support)
+	if c.sbftPeers == nil {
+		c.sbftPeers = make(map[string]*simplebft.SBFT)
+	}
+	c.sbftPeers[support.ChainID()] = initSbftPeer(c, support)
 
 	return &chain{
 		chainID:         support.ChainID(),
 		exitChan:        make(chan struct{}),
-		consensusStack:  sbft.consensusStack,
+		backend:         c.backend,
 		migrationStatus: migration.NewStatusStepper(support.IsSystemChannel(), support.ChainID()), // Needed by consensus-type migration
 	}, nil
 }
 
-func createConsensusStack(sbft *consenter) *consensusStack {
-	conn, err := connection.New(sbft.sbftStackConfig.ListenAddr, sbft.sbftStackConfig.CertFile, sbft.sbftStackConfig.KeyFile)
+func initSbftPeer(c *consenter, support consensus.ConsenterSupport) *simplebft.SBFT {
+	sbftPeer, err := c.backend.AddSbftPeer(c.sbftStackConfig.DataDir, support, c.config.Consensus)
 	if err != nil {
-		logger.Errorf("Error when trying to connect: %s", err)
-		panic(err)
-	}
-	pPersist := persist.New(sbft.sbftStackConfig.WALDir)
-	pBackend, err := backend.NewBackend(sbft.config.Peers, conn, pPersist, sbft.cert, sbft.localMsp)
-	if err != nil {
-		logger.Errorf("Backend instantiation error: %v", err)
-		panic(err)
-	}
-
-	return &consensusStack{
-		backend: pBackend,
-		persist: pPersist,
-	}
-}
-
-func initSbftPeer(sbft *consenter, support consensus.ConsenterSupport) *simplebft.SBFT {
-	sbftPeer, err := sbft.consensusStack.backend.AddSbftPeer(support.ChainID(), support, sbft.config.Consensus)
-	if err != nil {
-		logger.Errorf("SBFT peer instantiation error.")
+		c.logger.Errorf("SBFT peer instantiation error.")
 		panic(err)
 	}
 	return sbftPeer
@@ -143,11 +133,13 @@ func initSbftPeer(sbft *consenter, support consensus.ConsenterSupport) *simplebf
 // It implements the multichain.Chain interface. It is called by multichain.NewManagerImpl()
 // which is invoked when the ordering process is launched, before the call to NewServer().
 func (ch *chain) Start() {
-	once.Do(ch.consensusStack.backend.StartAndConnectWorkers)
+	db.Start()
+	once.Do(ch.backend.StartAndConnectWorkers)
 }
 
 // Halt frees the resources which were allocated for this Chain
 func (ch *chain) Halt() {
+	db.Stop()
 	// panic("There is no way to halt SBFT")
 	select {
 	case <-ch.exitChan:
@@ -157,23 +149,18 @@ func (ch *chain) Halt() {
 	}
 }
 
-// Enqueue accepts a message and returns true on acceptance, or false on shutdown
-//func (ch *chain) Enqueue(env *cb.Envelope) bool {
-//	return ch.consensusStack.backend.Enqueue(ch.chainID, env)
-//}
-
 func (ch *chain) WaitReady() error {
 	return nil
 }
 
 // Order accepts normal messages for ordering
 func (ch *chain) Order(env *cb.Envelope, configSeq uint64) error {
-	return ch.consensusStack.backend.Enqueue(ch.chainID, env)
+	return ch.backend.Enqueue(ch.chainID, env)
 }
 
 // Configure accepts configuration update messages for ordering
 func (ch *chain) Configure(config *cb.Envelope, configSeq uint64) error {
-	return ch.consensusStack.backend.Enqueue(ch.chainID, config)
+	return ch.backend.Enqueue(ch.chainID, config)
 }
 
 // Errored only closes on exit
