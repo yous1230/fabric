@@ -712,6 +712,18 @@
   revision = "bea94bb476ccecfbd31b12ed493a971bdb8c904b"
 
 [[projects]]
+  branch = "master"
+  digest = "1:4c14975208856ffaf02bb48d2216d0db4a5c316281c1d1b607418844be9b91cf"
+  name = "github.com/tjfoc/gmsm"
+  packages = [
+    "sm2",
+    "sm3",
+    "sm4",
+  ]
+  pruneopts = "NUT"
+  revision = "867dc485371b4d1165d1f63faafa71fa031364b3"
+
+[[projects]]
   digest = "1:3f3f2b36f76d1187ccf6640dd5bdbce43fd3c1a2cc0d747abc1e0de374d13e63"
   name = "github.com/willf/bitset"
   packages = ["."]
@@ -772,9 +784,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2e1733bde491e422f3c9cf7bf8b4cb3d11c867ad3017fec8897923f6106a3a51"
+  digest = "1:8e692f19d9cd9b8df337d976815df9fd041c36377e3951780ad325509a7166ff"
   name = "golang.org/x/crypto"
   packages = [
+    "ripemd160",
     "sha3",
     "ssh/terminal",
   ]
@@ -1008,6 +1021,9 @@
     "github.com/tedsuo/ifrit",
     "github.com/tedsuo/ifrit/ginkgomon",
     "github.com/tedsuo/ifrit/grouper",
+    "github.com/tjfoc/gmsm/sm2",
+    "github.com/tjfoc/gmsm/sm3",
+    "github.com/tjfoc/gmsm/sm4",
     "github.com/willf/bitset",
     "go.etcd.io/etcd/etcdserver/api/snap",
     "go.etcd.io/etcd/pkg/fileutil",
