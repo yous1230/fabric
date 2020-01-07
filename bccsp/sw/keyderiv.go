@@ -153,3 +153,22 @@ func (kd *aesPrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts
 		return nil, fmt.Errorf("Unsupported 'KeyDerivOpts' provided [%v]", opts)
 	}
 }
+
+type gmsm4PrivateKeyKeyDeriver struct {
+}
+
+func (kd *gmsm4PrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (bccsp.Key, error) {
+	return nil, errors.New("Unsupported KeyDeriver")
+}
+
+type gmsm2PublicKeyKeyDeriver struct{}
+
+func (kd *gmsm2PublicKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (bccsp.Key, error) {
+	return nil, errors.New("Unsupported KeyDeriver")
+}
+
+type gmsm2PrivateKeyKeyDeriver struct{}
+
+func (kd *gmsm2PrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (bccsp.Key, error) {
+	return nil, errors.New("Unsupported KeyDeriver")
+}
