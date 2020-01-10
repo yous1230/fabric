@@ -65,6 +65,8 @@ func (f *SWFactory) Get(config *FactoryOpts) (bccsp.BCCSP, error) {
 // SwOpts contains options for the SWFactory
 type SwOpts struct {
 	// Default algorithms when not specified (Deprecated?)
+	Algorithm string `mapstructure:"algorithm" json:"algorithm" yaml:"Algorithm"`
+
 	SecLevel   int    `mapstructure:"security" json:"security" yaml:"Security"`
 	HashFamily string `mapstructure:"hash" json:"hash" yaml:"Hash"`
 

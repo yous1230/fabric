@@ -314,6 +314,7 @@ func TestLoadLocalMSP(t *testing.T) {
 						BCCSP: &factory.FactoryOpts{
 							ProviderName: "SW",
 							SwOpts: &factory.SwOpts{
+								Algorithm:  "ECDSA",
 								HashFamily: "SHA2",
 								SecLevel:   256,
 								Ephemeral:  true,
@@ -731,6 +732,7 @@ func genesisConfig(t *testing.T) *localconfig.TopLevel {
 			BCCSP: &factory.FactoryOpts{
 				ProviderName: "SW",
 				SwOpts: &factory.SwOpts{
+					Algorithm:  "ECDSA",
 					HashFamily: "SHA2",
 					SecLevel:   256,
 					Ephemeral:  true,

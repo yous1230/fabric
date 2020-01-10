@@ -48,6 +48,7 @@ func TestSWFactoryGet(t *testing.T) {
 
 	opts := &FactoryOpts{
 		SwOpts: &SwOpts{
+			Algorithm:  "ECDSA",
 			SecLevel:   256,
 			HashFamily: "SHA2",
 		},
@@ -58,6 +59,7 @@ func TestSWFactoryGet(t *testing.T) {
 
 	opts = &FactoryOpts{
 		SwOpts: &SwOpts{
+			Algorithm:    "ECDSA",
 			SecLevel:     256,
 			HashFamily:   "SHA2",
 			FileKeystore: &FileKeystoreOpts{KeyStorePath: os.TempDir()},

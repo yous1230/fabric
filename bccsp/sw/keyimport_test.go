@@ -24,6 +24,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/tjfoc/gmsm/sm2"
+
 	mocks2 "github.com/hyperledger/fabric/bccsp/mocks"
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/hyperledger/fabric/bccsp/utils"
@@ -208,4 +210,96 @@ func TestX509PublicKeyImportOptsKeyImporter(t *testing.T) {
 	_, err = ki.KeyImport(cert, &mocks2.KeyImportOpts{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Certificate's public key type not recognized. Supported keys: [ECDSA, RSA]")
+}
+
+func TestGMSM4ImportKeyOptsKeyImporter(t *testing.T) {
+	t.Parallel()
+
+	ki := gmsm4ImportKeyOptsKeyImporter{}
+
+	_, err := ki.KeyImport("Hello World", &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport(nil, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport([]byte(nil), &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. It must not be nil.")
+
+	_, err = ki.KeyImport([]byte{0}, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid Key Length [")
+}
+
+func TestGMSM2PrivateKeyImportOptsKeyImporter(t *testing.T) {
+	t.Parallel()
+
+	ki := gmsm2PrivateKeyImportOptsKeyImporter{}
+
+	_, err := ki.KeyImport("Hello World", &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport(nil, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport([]byte(nil), &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw. It must not be nil.")
+
+	_, err = ki.KeyImport([]byte{0}, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed converting to GMSM2 private key")
+
+	k, err := rsa.GenerateKey(rand.Reader, 512)
+	assert.NoError(t, err)
+	raw := x509.MarshalPKCS1PrivateKey(k)
+	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed converting to GMSM2 private key")
+
+	smK, err := sm2.GenerateKey()
+	assert.NoError(t, err)
+	raw, err = sm2.MarshalSm2PrivateKey(smK, nil)
+	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
+	assert.NoError(t, err)
+}
+
+func TestGMSM2PublicKeyImportOptsKeyImporter(t *testing.T) {
+	t.Parallel()
+
+	ki := gmsm2PublicKeyImportOptsKeyImporter{}
+
+	_, err := ki.KeyImport("Hello World", &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport(nil, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw material. Expected byte array.")
+
+	_, err = ki.KeyImport([]byte(nil), &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid raw. It must not be nil.")
+
+	_, err = ki.KeyImport([]byte{0}, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed converting to GMSM2 public key")
+
+	k, err := rsa.GenerateKey(rand.Reader, 512)
+	assert.NoError(t, err)
+	raw, err := utils.PublicKeyToDER(&k.PublicKey)
+	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Failed converting to GMSM2 public key")
+
+	smK, err := sm2.GenerateKey()
+	assert.NoError(t, err)
+	raw, err = sm2.MarshalSm2PublicKey(&smK.PublicKey)
+	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
+	assert.NoError(t, err)
 }

@@ -30,6 +30,7 @@ func LoadPrivateKey(keystorePath string) (bccsp.Key, crypto.Signer, error) {
 	opts := &factory.FactoryOpts{
 		ProviderName: "SW",
 		SwOpts: &factory.SwOpts{
+			Algorithm:  "ECDSA",
 			HashFamily: "SHA2",
 			SecLevel:   256,
 
@@ -89,6 +90,7 @@ func GeneratePrivateKey(keystorePath string) (bccsp.Key,
 	opts := &factory.FactoryOpts{
 		ProviderName: "SW",
 		SwOpts: &factory.SwOpts{
+			Algorithm:  "ECDSA",
 			HashFamily: "SHA2",
 			SecLevel:   256,
 
