@@ -207,6 +207,7 @@ csr:
 bccsp:
     default: SW
     sw:
+        Algorithm: ECDSA
         hash: SHA2
         security: 256
         filekeystore:
