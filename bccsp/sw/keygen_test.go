@@ -22,6 +22,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/tjfoc/gmsm/sm2"
+
 	mocks2 "github.com/hyperledger/fabric/bccsp/mocks"
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/stretchr/testify/assert"
@@ -117,4 +119,32 @@ func TestRSAKeyGeneratorInvalidInputs(t *testing.T) {
 	_, err := kg.KeyGen(nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Failed generating RSA -1 key")
+}
+
+func TestGMSM2KeyGenerator(t *testing.T) {
+	t.Parallel()
+
+	kg := &gmsm2KeyGenerator{}
+
+	k, err := kg.KeyGen(nil)
+	assert.NoError(t, err)
+
+	gmsm2K, ok := k.(*gmsm2PrivateKey)
+	assert.True(t, ok)
+	assert.NotNil(t, gmsm2K.privKey)
+	assert.Equal(t, gmsm2K.privKey.Curve, sm2.P256Sm2())
+}
+
+func TestGMSM4KeyGenerator(t *testing.T) {
+	t.Parallel()
+
+	kg := &gmsm4KeyGenerator{}
+
+	k, err := kg.KeyGen(nil)
+	assert.NoError(t, err)
+
+	gmsm4K, ok := k.(*gmsm4PrivateKey)
+	assert.True(t, ok)
+	assert.NotNil(t, gmsm4K.privKey)
+	assert.Equal(t, len(gmsm4K.privKey), 16)
 }

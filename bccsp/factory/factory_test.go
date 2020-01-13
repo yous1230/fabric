@@ -84,6 +84,7 @@ BCCSP:
 		{
 			ProviderName: "SW",
 			SwOpts: &SwOpts{
+				Algorithm:  "ECDSA",
 				HashFamily: "SHA2",
 				SecLevel:   256,
 
