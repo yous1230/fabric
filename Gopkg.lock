@@ -713,12 +713,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4c14975208856ffaf02bb48d2216d0db4a5c316281c1d1b607418844be9b91cf"
+  digest = "1:c146204d2908a6ef8d5a375118d708739c82343cdc1eeecc4a411c4263e1953e"
   name = "github.com/tjfoc/gmsm"
   packages = [
     "sm2",
     "sm3",
-    "sm4",
   ]
   pruneopts = "NUT"
   revision = "867dc485371b4d1165d1f63faafa71fa031364b3"
@@ -730,6 +729,34 @@
   pruneopts = "NUT"
   revision = "e553b05586428962bf7058d1044519d87ca72d74"
   version = "v1.1.9"
+
+[[projects]]
+  digest = "1:af466c3f2214112b54990ab0c4e8173b169dfd7f10904daa93a88e760836aac3"
+  name = "github.com/zhigui-projects/gmsm"
+  packages = [
+    "sm2",
+    "sm3",
+    "sm4",
+  ]
+  pruneopts = "NUT"
+  revision = "efc856098c247e95de05276601884df79ee3afb0"
+  version = "v1.2.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:34109bb69e67d84209d305ebbd3c36973636b16d983fc60b80d7b32e4283a708"
+  name = "github.com/zhigui-projects/tls"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "1cffc53772dcb340d9f53c438b26dbdeb763a397"
+
+[[projects]]
+  branch = "master"
+  digest = "1:bd41e11b32a55cb401fde408291271ec8dcf61d008c84c7cc74f19defc6e1700"
+  name = "github.com/zhigui-projects/x509"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "88b81d9200e4747bbadda3980ac8b83ce9b9022a"
 
 [[projects]]
   digest = "1:7994f0511ea39eb049909df41301aabf5e6289b97c1084f7cc8c351d765469e1"
@@ -784,9 +811,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8e692f19d9cd9b8df337d976815df9fd041c36377e3951780ad325509a7166ff"
+  digest = "1:a8908f4b9f9d4f8354a3527ff09cc06ea77c3f524affa2f9ca849c4128e916c3"
   name = "golang.org/x/crypto"
   packages = [
+    "cryptobyte",
+    "cryptobyte/asn1",
     "ripemd160",
     "sha3",
     "ssh/terminal",
@@ -1023,8 +1052,10 @@
     "github.com/tedsuo/ifrit/grouper",
     "github.com/tjfoc/gmsm/sm2",
     "github.com/tjfoc/gmsm/sm3",
-    "github.com/tjfoc/gmsm/sm4",
     "github.com/willf/bitset",
+    "github.com/zhigui-projects/gmsm/sm2",
+    "github.com/zhigui-projects/gmsm/sm4",
+    "github.com/zhigui-projects/tls",
     "go.etcd.io/etcd/etcdserver/api/snap",
     "go.etcd.io/etcd/pkg/fileutil",
     "go.etcd.io/etcd/raft",
