@@ -24,10 +24,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/tjfoc/gmsm/sm2"
-
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/utils"
+	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 type aes256ImportKeyOptsKeyImporter struct{}

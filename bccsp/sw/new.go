@@ -11,10 +11,9 @@ import (
 	"crypto/sha512"
 	"reflect"
 
-	"github.com/tjfoc/gmsm/sm3"
-
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
+	"github.com/zhigui-projects/gmsm/sm3"
 	"golang.org/x/crypto/sha3"
 )
 

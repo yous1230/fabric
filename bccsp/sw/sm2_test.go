@@ -11,10 +11,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/tjfoc/gmsm/sm2"
-	"github.com/tjfoc/gmsm/sm3"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/zhigui-projects/gmsm/sm2"
+	"github.com/zhigui-projects/gmsm/sm3"
 )
 
 func TestSignSM2BadParameter(t *testing.T) {

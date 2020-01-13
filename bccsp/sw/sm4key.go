@@ -18,9 +18,8 @@ package sw
 import (
 	"errors"
 
-	"github.com/tjfoc/gmsm/sm3"
-
 	"github.com/hyperledger/fabric/bccsp"
+	"github.com/zhigui-projects/gmsm/sm3"
 )
 
 type gmsm4PrivateKey struct {
