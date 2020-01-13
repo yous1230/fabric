@@ -19,7 +19,7 @@ import (
 	"crypto/rand"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/tjfoc/gmsm/sm2"
+	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 func signGMSM2(k *sm2.PrivateKey, msg []byte, opts bccsp.SignerOpts) (signature []byte, err error) {

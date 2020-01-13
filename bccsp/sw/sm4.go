@@ -20,7 +20,7 @@ import (
 	"crypto/cipher"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/tjfoc/gmsm/sm4"
+	"github.com/zhigui-projects/gmsm/sm4"
 )
 
 func SM4Encrypt(key, src []byte) ([]byte, error) {
