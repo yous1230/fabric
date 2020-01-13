@@ -69,6 +69,18 @@ func isECDSASignedCert(cert *x509.Certificate) bool {
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA512
 }
 
+const (
+	SM2WithSM3 x509.SignatureAlgorithm = 100 + iota
+	SM2WithSHA1
+	SM2WithSHA256
+)
+
+func isSM2SignedCert(cert *x509.Certificate) bool {
+	return cert.SignatureAlgorithm == SM2WithSM3 ||
+		cert.SignatureAlgorithm == SM2WithSHA1 ||
+		cert.SignatureAlgorithm == SM2WithSHA256
+}
+
 // sanitizeECDSASignedCert checks that the signatures signing a cert
 // is in low-S. This is checked against the public key of parentCert.
 // If the signature is not in low-S, then a new certificate is generated
