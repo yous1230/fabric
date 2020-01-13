@@ -23,9 +23,8 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/tjfoc/gmsm/sm2"
-
 	"github.com/hyperledger/fabric/bccsp"
+	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 type ecdsaKeyGenerator struct {

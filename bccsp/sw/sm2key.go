@@ -19,10 +19,9 @@ import (
 	"crypto/elliptic"
 	"fmt"
 
-	"github.com/tjfoc/gmsm/sm3"
-
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/tjfoc/gmsm/sm2"
+	"github.com/zhigui-projects/gmsm/sm2"
+	"github.com/zhigui-projects/gmsm/sm3"
 )
 
 type gmsm2PrivateKey struct {

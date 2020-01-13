@@ -24,12 +24,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tjfoc/gmsm/sm2"
-
 	mocks2 "github.com/hyperledger/fabric/bccsp/mocks"
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 func TestKeyImport(t *testing.T) {
