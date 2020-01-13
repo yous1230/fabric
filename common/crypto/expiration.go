@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/protos/msp"
+	x "github.com/zhigui-projects/x509"
 )
 
 // ExpiresAt returns when the given identity expires, or a zero time.Time
@@ -32,11 +33,15 @@ func certExpirationTime(pemBytes []byte) time.Time {
 		// If the identity isn't a PEM block, we make no decisions about the expiration time
 		return time.Time{}
 	}
-	cert, err := x509.ParseCertificate(bl.Bytes)
-	if err != nil {
-		return time.Time{}
+	if cert, err := x509.ParseCertificate(bl.Bytes); err == nil {
+		return cert.NotAfter
 	}
-	return cert.NotAfter
+
+	if cert, err := x.X509(x.SM2).ParseCertificate(bl.Bytes); err == nil {
+		return cert.NotAfter
+	}
+
+	return time.Time{}
 }
 
 // WarnFunc notifies a warning happened with the given format, and can be replaced with Warnf of a logger.

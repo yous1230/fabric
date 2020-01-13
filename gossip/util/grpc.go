@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger/fabric/core/comm"
 	"github.com/hyperledger/fabric/gossip/api"
 	"github.com/hyperledger/fabric/gossip/common"
+	tlsm "github.com/zhigui-projects/tls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -45,15 +46,23 @@ func CreateGRPCLayer() (port int, gRPCServer *comm.GRPCServer, certs *common.TLS
 	if err != nil {
 		panic(err)
 	}
+	tlsServerCert, err := tlsm.X509KeyPair(serverKeyPair.Cert, serverKeyPair.Key)
+	if err != nil {
+		panic(err)
+	}
+	tlsClientCert, err := tlsm.X509KeyPair(clientKeyPair.Cert, clientKeyPair.Key)
+	if err != nil {
+		panic(err)
+	}
 
-	tlsServerCert, err := tls.X509KeyPair(serverKeyPair.Cert, serverKeyPair.Key)
-	if err != nil {
-		panic(err)
-	}
-	tlsClientCert, err := tls.X509KeyPair(clientKeyPair.Cert, clientKeyPair.Key)
-	if err != nil {
-		panic(err)
-	}
+	//tlsServerCert, err := tls.X509KeyPair(serverKeyPair.Cert, serverKeyPair.Key)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//tlsClientCert, err := tls.X509KeyPair(clientKeyPair.Cert, clientKeyPair.Key)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	tlsConf := &tls.Config{
 		Certificates: []tls.Certificate{tlsClientCert},
