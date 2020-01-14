@@ -182,8 +182,7 @@ func (*gmsm4ImportKeyOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyI
 
 type gmsm2PrivateKeyImportOptsKeyImporter struct{}
 
-func (*gmsm2PrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Key, err error) {
-
+func (*gmsm2PrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (bccsp.Key, error) {
 	der, ok := raw.([]byte)
 	if !ok {
 		return nil, errors.New("[GMSM2PrivateKeyImportOpts] Invalid raw material. Expected byte array.")
@@ -194,14 +193,13 @@ func (*gmsm2PrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bcc
 	}
 
 	lowLevelKey, err := utils.DERToPrivateKey(der, true)
+	if err != nil {
+		return nil, fmt.Errorf("Failed converting to GMSM2 private key [%s]", err)
+	}
 
 	gmsm2SK, ok := lowLevelKey.(*sm2.PrivateKey)
 	if !ok {
 		return nil, errors.New("Failed casting to SM2 private key. Invalid raw material.")
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("Failed converting to GMSM2 private key [%s]", err)
 	}
 
 	return &gmsm2PrivateKey{gmsm2SK}, nil

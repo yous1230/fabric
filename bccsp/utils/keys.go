@@ -247,7 +247,7 @@ func DERToPrivateKey(der []byte, isSM2 bool) (key interface{}, err error) {
 		return
 	}
 
-	return nil, errors.New("Invalid key type. The DER must contain an rsa.PrivateKey or ecdsa.PrivateKey")
+	return nil, errors.New("Invalid key type. The DER must contain an rsa.PrivateKey, ecdsa.PrivateKey or sm2.PrivateKey")
 }
 
 // PEMtoPrivateKey unmarshals a pem to private key

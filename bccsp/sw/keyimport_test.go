@@ -259,7 +259,7 @@ func TestGMSM2PrivateKeyImportOptsKeyImporter(t *testing.T) {
 	raw := x509.MarshalPKCS1PrivateKey(k)
 	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Failed converting to GMSM2 private key")
+	assert.Contains(t, err.Error(), "Failed casting to SM2 private key. Invalid raw material.")
 
 	smK, err := sm2.GenerateKey()
 	assert.NoError(t, err)
