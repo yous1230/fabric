@@ -26,6 +26,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/zhigui-projects/gmsm/sm2"
 	x "github.com/zhigui-projects/x509"
@@ -221,7 +222,7 @@ func PrivateKeyToEncryptedPEM(privateKey interface{}, pwd []byte) ([]byte, error
 }
 
 // DERToPrivateKey unmarshals a der to private key
-func DERToPrivateKey(der []byte) (key interface{}, err error) {
+func DERToPrivateKey(der []byte, isSM2 bool) (key interface{}, err error) {
 
 	if key, err = x509.ParsePKCS1PrivateKey(der); err == nil {
 		return key, nil
@@ -236,8 +237,10 @@ func DERToPrivateKey(der []byte) (key interface{}, err error) {
 		}
 	}
 
-	if key, err = sm2.ParseSm2PrivateKey(der); err == nil {
-		return
+	if isSM2 {
+		if key, err = sm2.ParsePKCS8UnecryptedPrivateKey(der); err == nil {
+			return
+		}
 	}
 
 	if key, err = x509.ParseECPrivateKey(der); err == nil {
@@ -259,6 +262,8 @@ func PEMtoPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
 
 	// TODO: derive from header the type of the key
 
+	isSM2 := strings.HasPrefix(block.Type, x.SM2)
+
 	if x509.IsEncryptedPEMBlock(block) {
 		if len(pwd) == 0 {
 			return nil, errors.New("Encrypted Key. Need a password")
@@ -269,14 +274,14 @@ func PEMtoPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
 			return nil, fmt.Errorf("Failed PEM decryption [%s]", err)
 		}
 
-		key, err := DERToPrivateKey(decrypted)
+		key, err := DERToPrivateKey(decrypted, isSM2)
 		if err != nil {
 			return nil, err
 		}
 		return key, err
 	}
 
-	cert, err := DERToPrivateKey(block.Bytes)
+	cert, err := DERToPrivateKey(block.Bytes, isSM2)
 	if err != nil {
 		return nil, err
 	}
