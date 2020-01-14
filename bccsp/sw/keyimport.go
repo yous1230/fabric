@@ -100,7 +100,7 @@ func (*ecdsaPrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bcc
 		return nil, errors.New("[ECDSADERPrivateKeyImportOpts] Invalid raw. It must not be nil.")
 	}
 
-	lowLevelKey, err := utils.DERToPrivateKey(der)
+	lowLevelKey, err := utils.DERToPrivateKey(der, false)
 	if err != nil {
 		return nil, fmt.Errorf("Failed converting PKIX to ECDSA public key [%s]", err)
 	}
@@ -193,7 +193,12 @@ func (*gmsm2PrivateKeyImportOptsKeyImporter) KeyImport(raw interface{}, opts bcc
 		return nil, errors.New("[GMSM2PrivateKeyImportOpts] Invalid raw. It must not be nil.")
 	}
 
-	gmsm2SK, err := sm2.ParsePKCS8PrivateKey(der, nil)
+	lowLevelKey, err := utils.DERToPrivateKey(der, true)
+
+	gmsm2SK, ok := lowLevelKey.(*sm2.PrivateKey)
+	if !ok {
+		return nil, errors.New("Failed casting to SM2 private key. Invalid raw material.")
+	}
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed converting to GMSM2 private key [%s]", err)
