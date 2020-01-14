@@ -27,7 +27,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tjfoc/gmsm/sm2"
+	"github.com/zhigui-projects/gmsm/sm2"
 	x "github.com/zhigui-projects/x509"
 )
 

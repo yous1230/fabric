@@ -1,10 +1,10 @@
 package tls
 
 import (
-	"bytes"
+//	"bytes"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/ed25519"
+//	"crypto/ed25519"
 	"crypto/rsa"
 	orgin_tls "crypto/tls"
 	orgin_x509 "crypto/x509"
@@ -128,14 +128,14 @@ func X509KeyPair(certPEMBlock, keyPEMBlock []byte) (orgin_tls.Certificate, error
 		if pub.X.Cmp(priv.X) != 0 || pub.Y.Cmp(priv.Y) != 0 {
 			return fail(errors.New("tls: sm2 private key does not match public key"))
 		}
-	case ed25519.PublicKey:
-		priv, ok := cert.PrivateKey.(ed25519.PrivateKey)
-		if !ok {
-			return fail(errors.New("tls: private key type does not match public key type"))
-		}
-		if !bytes.Equal(priv.Public().(ed25519.PublicKey), pub) {
-			return fail(errors.New("tls: private key does not match public key"))
-		}
+//	case ed25519.PublicKey:
+//		priv, ok := cert.PrivateKey.(ed25519.PrivateKey)
+//		if !ok {
+//			return fail(errors.New("tls: private key type does not match public key type"))
+//		}
+//		if !bytes.Equal(priv.Public().(ed25519.PublicKey), pub) {
+//			return fail(errors.New("tls: private key does not match public key"))
+//		}
 	default:
 		return fail(errors.New("tls: unknown public key algorithm"))
 	}
@@ -155,7 +155,8 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 	}
 	if key, err := orgin_x509.ParsePKCS8PrivateKey(der); err == nil {
 		switch key := key.(type) {
-		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+//		case *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey:
+		case *rsa.PrivateKey, *ecdsa.PrivateKey:
 			return key, nil
 		default:
 			return nil, errors.New("tls: found unknown private key type in PKCS#8 wrapping")

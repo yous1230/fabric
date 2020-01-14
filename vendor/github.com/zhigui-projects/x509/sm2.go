@@ -195,7 +195,8 @@ func (s *x509SM2) signingParamsForPublicKey(pub interface{}, requestedSigAlgo x.
 				return
 			}
 			sigAlgo.Algorithm, hashFunc = details.oid, details.hash
-			if hashFunc == 0 && pubType != x.Ed25519 {
+//			if hashFunc == 0 && pubType != x.Ed25519 {
+			if hashFunc == 0 {
 				err = errors.New("x509: cannot sign with hash function requested")
 				return
 			}
