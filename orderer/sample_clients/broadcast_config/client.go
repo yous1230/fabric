@@ -64,7 +64,7 @@ func init() {
 	}
 
 	// Load local MSP
-	err = mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID)
+	err = mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID, conf.General.Hash.HashFamily, conf.General.Hash.HashFunction)
 	if err != nil {
 		panic(fmt.Errorf("Failed to initialize local MSP: %s", err))
 	}

@@ -22,7 +22,9 @@ Organizations:
         AnchorPeers:
             - Host: 127.0.0.1
               Port: 7051
-
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
 Capabilities:
     Channel: &ChannelCapabilities
         V1_3: true

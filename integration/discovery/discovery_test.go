@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	docker "github.com/fsouza/go-dockerclient"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/common/cauthdsl"
@@ -251,13 +253,13 @@ var _ = Describe("DiscoveryService", func() {
 		Expect(discoveredConfig.Msps).To(HaveLen(len(network.Organizations)))
 		for _, o := range network.Orderers {
 			org := network.Organization(o.Organization)
-			mspConfig, err := msp.GetVerifyingMspConfig(network.OrdererOrgMSPDir(org), org.MSPID, "bccsp")
+			mspConfig, err := msp.GetVerifyingMspConfig(network.OrdererOrgMSPDir(org), org.MSPID, "bccsp", bccsp.SHA2, bccsp.SHA256)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(discoveredConfig.Msps[org.MSPID]).To(Equal(unmarshalFabricMSPConfig(mspConfig)))
 		}
 		for _, p := range network.Peers {
 			org := network.Organization(p.Organization)
-			mspConfig, err := msp.GetVerifyingMspConfig(network.PeerOrgMSPDir(org), org.MSPID, "bccsp")
+			mspConfig, err := msp.GetVerifyingMspConfig(network.PeerOrgMSPDir(org), org.MSPID, "bccsp", bccsp.SHA2, bccsp.SHA256)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(discoveredConfig.Msps[org.MSPID]).To(Equal(unmarshalFabricMSPConfig(mspConfig)))
 		}

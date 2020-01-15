@@ -96,6 +96,10 @@ General:
             # chosen using: 'LocalMSPDir'/keystore
             FileKeyStore:
                 KeyStore:
+    # Hash function used
+    Hash:
+        hashFamily: SHA2
+        hashFunction: SHA256
 
 ################################################################################
 #

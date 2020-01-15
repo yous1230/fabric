@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/common/tools/cryptogen/ca"
 	"github.com/hyperledger/fabric/common/tools/cryptogen/msp"
 	fabricmsp "github.com/hyperledger/fabric/msp"
@@ -28,6 +30,8 @@ const (
 	testOrganizationalUnit = "Hyperledger Fabric"
 	testStreetAddress      = "testStreetAddress"
 	testPostalCode         = "123456"
+	testHashFamily         = bccsp.SHA2
+	testHashFunction       = bccsp.SHA256
 )
 
 var testDir = filepath.Join(os.TempDir(), "msp-test")
@@ -110,7 +114,7 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	}
 
 	// finally check to see if we can load this as a local MSP config
-	testMSPConfig, err := fabricmsp.GetLocalMspConfig(mspDir, nil, testName)
+	testMSPConfig, err := fabricmsp.GetLocalMspConfig(mspDir, nil, testName, bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err, "Error parsing local MSP config")
 	testMSP, err := fabricmsp.New(&fabricmsp.BCCSPNewOpts{NewBaseOpts: fabricmsp.NewBaseOpts{Version: fabricmsp.MSPv1_0}})
 	assert.NoError(t, err, "Error creating new BCCSP MSP")
@@ -166,7 +170,7 @@ func testGenerateVerifyingMSP(t *testing.T, nodeOUs bool) {
 			"Expected to find file "+file)
 	}
 	// finally check to see if we can load this as a verifying MSP config
-	testMSPConfig, err := fabricmsp.GetVerifyingMspConfig(mspDir, testName, fabricmsp.ProviderTypeToString(fabricmsp.FABRIC))
+	testMSPConfig, err := fabricmsp.GetVerifyingMspConfig(mspDir, testName, fabricmsp.ProviderTypeToString(fabricmsp.FABRIC), testHashFamily, testHashFunction)
 	assert.NoError(t, err, "Error parsing verifying MSP config")
 	testMSP, err := fabricmsp.New(&fabricmsp.BCCSPNewOpts{NewBaseOpts: fabricmsp.NewBaseOpts{Version: fabricmsp.MSPv1_0}})
 	assert.NoError(t, err, "Error creating new BCCSP MSP")

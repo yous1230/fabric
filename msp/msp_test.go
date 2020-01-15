@@ -67,7 +67,7 @@ func TestMSPSetupNoCryptoConf(t *testing.T) {
 		os.Exit(-1)
 	}
 
-	conf, err := GetLocalMspConfig(mspDir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -124,7 +124,7 @@ func TestGetters(t *testing.T) {
 }
 
 func TestMSPSetupBad(t *testing.T) {
-	_, err := GetLocalMspConfig("barf", nil, "SampleOrg")
+	_, err := GetLocalMspConfig("barf", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err == nil {
 		t.Fatalf("Setup should have failed on an invalid config file")
 		return
@@ -154,7 +154,7 @@ func (*bccspNoKeyLookupKS) GetKey(ski []byte) (k bccsp.Key, err error) {
 func TestNotFoundInBCCSP(t *testing.T) {
 	dir, err := configtest.GetDevMspDir()
 	assert.NoError(t, err)
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 
 	assert.NoError(t, err)
 
@@ -203,7 +203,7 @@ func TestGetSigningIdentityFromVerifyingMSP(t *testing.T) {
 		os.Exit(-1)
 	}
 
-	conf, err = GetVerifyingMspConfig(mspDir, "SampleOrg", ProviderTypeToString(FABRIC))
+	conf, err = GetVerifyingMspConfig(mspDir, "SampleOrg", ProviderTypeToString(FABRIC), bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -325,7 +325,7 @@ func TestValidateCAIdentity(t *testing.T) {
 }
 
 func TestBadAdminIdentity(t *testing.T) {
-	conf, err := GetLocalMspConfig("testdata/badadmin", nil, "SampleOrg")
+	conf, err := GetLocalMspConfig("testdata/badadmin", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
@@ -948,7 +948,7 @@ func TestIdentityExpiresAt(t *testing.T) {
 
 func TestIdentityExpired(t *testing.T) {
 	expiredCertsDir := "testdata/expired"
-	conf, err := GetLocalMspConfig(expiredCertsDir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(expiredCertsDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
@@ -1072,7 +1072,7 @@ func TestMain(m *testing.M) {
 		os.Exit(-1)
 	}
 
-	conf, err = GetLocalMspConfig(mspDir, nil, "SampleOrg")
+	conf, err = GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -1168,7 +1168,7 @@ func getIdentity(t *testing.T, path string) Identity {
 }
 
 func getLocalMSPWithVersionAndError(t *testing.T, dir string, version MSPVersion) (MSP, error) {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(version)
@@ -1183,7 +1183,7 @@ func getLocalMSPWithVersionAndError(t *testing.T, dir string, version MSPVersion
 }
 
 func getLocalMSP(t *testing.T, dir string) MSP {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
@@ -1205,7 +1205,7 @@ func getLocalMSPWithVersion(t *testing.T, dir string, version MSPVersion) MSP {
 }
 
 func getLocalMSPWithVersionErr(t *testing.T, dir string, version MSPVersion, expectedErr string) MSP {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(version)

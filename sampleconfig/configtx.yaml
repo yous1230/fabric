@@ -61,6 +61,10 @@ Organizations:
             - Host: 127.0.0.1
               Port: 7051
 
+        # Hash function used
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
 ################################################################################
 #
 #   CAPABILITIES

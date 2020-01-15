@@ -9,6 +9,8 @@ package mgmt
 import (
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/config/configtest"
 	"github.com/hyperledger/fabric/msp"
@@ -117,7 +119,7 @@ func LoadMSPSetupForTesting() error {
 	if err != nil {
 		return err
 	}
-	conf, err := msp.GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := msp.GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		return err
 	}

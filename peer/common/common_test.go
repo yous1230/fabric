@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/core/config/configtest"
@@ -60,7 +62,9 @@ func TestInitConfig(t *testing.T) {
 
 func TestInitCryptoMissingDir(t *testing.T) {
 	dir := os.TempDir() + "/" + util.GenerateUUID()
-	err := common.InitCrypto(dir, "SampleOrg", msp.ProviderTypeToString(msp.FABRIC))
+	hashFamily := bccsp.SHA2
+	hashFunction := bccsp.SHA256
+	err := common.InitCrypto(dir, "SampleOrg", msp.ProviderTypeToString(msp.FABRIC), hashFamily, hashFunction)
 	assert.Error(t, err, "Should be able to initialize crypto with non-existing directory")
 	assert.Contains(t, err.Error(), fmt.Sprintf("folder \"%s\" does not exist", dir))
 }
@@ -68,12 +72,14 @@ func TestInitCryptoMissingDir(t *testing.T) {
 func TestInitCrypto(t *testing.T) {
 	mspConfigPath, err := configtest.GetDevMspDir()
 	localMspId := "SampleOrg"
-	err = common.InitCrypto(mspConfigPath, localMspId, msp.ProviderTypeToString(msp.FABRIC))
+	hashFamily := bccsp.SHA2
+	hashFunction := bccsp.SHA256
+	err = common.InitCrypto(mspConfigPath, localMspId, msp.ProviderTypeToString(msp.FABRIC), hashFamily, hashFunction)
 	assert.NoError(t, err, "Unexpected error [%s] calling InitCrypto()", err)
-	err = common.InitCrypto("/etc/foobaz", localMspId, msp.ProviderTypeToString(msp.FABRIC))
+	err = common.InitCrypto("/etc/foobaz", localMspId, msp.ProviderTypeToString(msp.FABRIC), hashFamily, hashFunction)
 	assert.Error(t, err, fmt.Sprintf("Expected error [%s] calling InitCrypto()", err))
 	localMspId = ""
-	err = common.InitCrypto(mspConfigPath, localMspId, msp.ProviderTypeToString(msp.FABRIC))
+	err = common.InitCrypto(mspConfigPath, localMspId, msp.ProviderTypeToString(msp.FABRIC), hashFamily, hashFunction)
 	assert.Error(t, err, fmt.Sprintf("Expected error [%s] calling InitCrypto()", err))
 }
 

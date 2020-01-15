@@ -41,6 +41,11 @@ Organizations:
                 Type: Signature
                 Rule: "OR('OrdererMSP.admin')"
 
+        # Hash function used
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
+
     - &Org1
         # DefaultOrg defines the organization which is used in the sampleconfig
         # of the fabric.git development environment
@@ -72,6 +77,11 @@ Organizations:
             - Host: peer0.org1.example.com
               Port: 7051
 
+        # Hash function used
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
+
     - &Org2
         # DefaultOrg defines the organization which is used in the sampleconfig
         # of the fabric.git development environment
@@ -102,6 +112,11 @@ Organizations:
             # encoded in the genesis block in the Application section context
             - Host: peer0.org2.example.com
               Port: 7051
+
+        # Hash function used
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
 
     - &Org3
         # Name of the organization
@@ -135,6 +150,11 @@ Organizations:
             # encoded in the genesis block in the Application section context
             - Host: peer0.org3.example.com
               Port: 7051
+
+        # Hash function used
+        Hash:
+            hashFamily: SHA2
+            hashFunction: SHA256
 
 ################################################################################
 #
