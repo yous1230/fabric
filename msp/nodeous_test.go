@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/stretchr/testify/assert"
@@ -313,7 +315,7 @@ func TestLoad143MSPWithInvalidOrdererConfiguration(t *testing.T) {
 	// testdata/nodeouorderer2:
 	// the configuration enables NodeOUs (with orderOU) but no valid identifier for the OrdererOU
 	thisMSP := getLocalMSPWithVersion(t, "testdata/nodeouorderer2", MSPv1_4_3)
-	conf, err := GetLocalMspConfig("testdata/nodeouorderer2", nil, "SampleOrg")
+	conf, err := GetLocalMspConfig("testdata/nodeouorderer2", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	id, err := thisMSP.(*bccspmsp).GetDefaultSigningIdentity()

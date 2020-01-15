@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/Shopify/sarama"
-	bccsp "github.com/hyperledger/fabric/bccsp/factory"
+	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/viperutil"
 	coreconfig "github.com/hyperledger/fabric/core/config"
@@ -54,8 +56,9 @@ type General struct {
 	Profile           Profile
 	LocalMSPDir       string
 	LocalMSPID        string
-	BCCSP             *bccsp.FactoryOpts
+	BCCSP             *factory.FactoryOpts
 	Authentication    Authentication
+	Hash              Hash
 }
 
 type Cluster struct {
@@ -107,6 +110,12 @@ type SASLPlain struct {
 type Authentication struct {
 	TimeWindow         time.Duration
 	NoExpirationChecks bool
+}
+
+// Hash contains configuration parameters related to hash algorithm
+type Hash struct {
+	HashFamily   string
+	HashFunction string
 }
 
 // Profile contains configuration for Go pprof profiling.
@@ -237,9 +246,13 @@ var Defaults = TopLevel{
 		},
 		LocalMSPDir: "msp",
 		LocalMSPID:  "SampleOrg",
-		BCCSP:       bccsp.GetDefaultOpts(),
+		BCCSP:       factory.GetDefaultOpts(),
 		Authentication: Authentication{
 			TimeWindow: time.Duration(15 * time.Minute),
+		},
+		Hash: Hash{
+			HashFamily:   bccsp.SHA2,
+			HashFunction: bccsp.SHA256,
 		},
 	},
 	RAMLedger: RAMLedger{

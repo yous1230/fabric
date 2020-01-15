@@ -36,6 +36,8 @@ func TestStartCmd(t *testing.T) {
 	viper.Set("peer.listenAddress", "0.0.0.0:6051")
 	viper.Set("peer.chaincodeListenAddress", "0.0.0.0:6052")
 	viper.Set("peer.fileSystemPath", tempDir)
+	viper.Set("peer.hash.hashFamily", "SHA2")
+	viper.Set("peer.hash.hashFunction", "SHA256")
 	viper.Set("chaincode.executetimeout", "30s")
 	viper.Set("chaincode.mode", "dev")
 

@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/pkg/errors"
@@ -157,10 +156,10 @@ func SetupBCCSPKeystoreConfig(bccspConfig *factory.FactoryOpts, keystoreDir stri
 // GetLocalMspConfigWithType returns a local MSP
 // configuration for the MSP in the specified
 // directory, with the specified ID and type
-func GetLocalMspConfigWithType(dir string, bccspConfig *factory.FactoryOpts, ID, mspType string) (*msp.MSPConfig, error) {
+func GetLocalMspConfigWithType(dir string, bccspConfig *factory.FactoryOpts, ID, mspType string, hashFamily string, hashFunction string) (*msp.MSPConfig, error) {
 	switch mspType {
 	case ProviderTypeToString(FABRIC):
-		return GetLocalMspConfig(dir, bccspConfig, ID)
+		return GetLocalMspConfig(dir, bccspConfig, ID, hashFamily, hashFunction)
 	case ProviderTypeToString(IDEMIX):
 		return GetIdemixMspConfig(dir, ID)
 	default:
@@ -168,7 +167,7 @@ func GetLocalMspConfigWithType(dir string, bccspConfig *factory.FactoryOpts, ID,
 	}
 }
 
-func GetLocalMspConfig(dir string, bccspConfig *factory.FactoryOpts, ID string) (*msp.MSPConfig, error) {
+func GetLocalMspConfig(dir string, bccspConfig *factory.FactoryOpts, ID string, hashFamily string, hashFunction string) (*msp.MSPConfig, error) {
 	signcertDir := filepath.Join(dir, signcerts)
 	keystoreDir := filepath.Join(dir, keystore)
 	bccspConfig = SetupBCCSPKeystoreConfig(bccspConfig, keystoreDir)
@@ -191,14 +190,14 @@ func GetLocalMspConfig(dir string, bccspConfig *factory.FactoryOpts, ID string) 
 
 	sigid := &msp.SigningIdentityInfo{PublicSigner: signcert[0], PrivateSigner: nil}
 
-	return getMspConfig(dir, ID, sigid)
+	return getMspConfig(dir, ID, sigid, hashFamily, hashFunction)
 }
 
 // GetVerifyingMspConfig returns an MSP config given directory, ID and type
-func GetVerifyingMspConfig(dir, ID, mspType string) (*msp.MSPConfig, error) {
+func GetVerifyingMspConfig(dir, ID, mspType, hashFamily, hashFunction string) (*msp.MSPConfig, error) {
 	switch mspType {
 	case ProviderTypeToString(FABRIC):
-		return getMspConfig(dir, ID, nil)
+		return getMspConfig(dir, ID, nil, hashFamily, hashFunction)
 	case ProviderTypeToString(IDEMIX):
 		return GetIdemixMspConfig(dir, ID)
 	default:
@@ -206,7 +205,7 @@ func GetVerifyingMspConfig(dir, ID, mspType string) (*msp.MSPConfig, error) {
 	}
 }
 
-func getMspConfig(dir string, ID string, sigid *msp.SigningIdentityInfo) (*msp.MSPConfig, error) {
+func getMspConfig(dir string, ID string, sigid *msp.SigningIdentityInfo, hashFamily string, hashFunction string) (*msp.MSPConfig, error) {
 	cacertDir := filepath.Join(dir, cacerts)
 	admincertDir := filepath.Join(dir, admincerts)
 	intermediatecertsDir := filepath.Join(dir, intermediatecerts)
@@ -337,8 +336,8 @@ func getMspConfig(dir string, ID string, sigid *msp.SigningIdentityInfo) (*msp.M
 
 	// Set FabricCryptoConfig
 	cryptoConfig := &msp.FabricCryptoConfig{
-		SignatureHashFamily:            bccsp.SHA2,
-		IdentityIdentifierHashFunction: bccsp.SHA256,
+		SignatureHashFamily:            hashFamily,
+		IdentityIdentifierHashFunction: hashFunction,
 	}
 
 	// Compose FabricMSPConfig

@@ -9,6 +9,8 @@ package mgmt
 import (
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/core/config/configtest"
 )
 
@@ -18,7 +20,7 @@ func TestLocalMSP(t *testing.T) {
 		t.Fatalf("GetDevMspDir failed, err %s", err)
 	}
 
-	err = LoadLocalMsp(mspDir, nil, "SampleOrg")
+	err = LoadLocalMsp(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		t.Fatalf("LoadLocalMsp failed, err %s", err)
 	}

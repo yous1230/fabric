@@ -9,6 +9,8 @@ package encoder_test
 import (
 	"fmt"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -148,6 +150,10 @@ var _ = Describe("Encoder", func() {
 								Type: "garbage",
 							},
 						},
+						Hash: &genesisconfig.Hash{
+							HashFamily:   bccsp.SHA2,
+							HashFunction: bccsp.SHA256,
+						},
 					},
 				}
 			})
@@ -173,6 +179,10 @@ var _ = Describe("Encoder", func() {
 						ID:      "SampleMSP",
 						MSPType: "bccsp",
 						Name:    "SampleOrg",
+						Hash: &genesisconfig.Hash{
+							HashFamily:   bccsp.SHA2,
+							HashFunction: bccsp.SHA256,
+						},
 					},
 				},
 				Policies: map[string]*genesisconfig.Policy{
@@ -318,6 +328,10 @@ var _ = Describe("Encoder", func() {
 						ID:      "SampleMSP",
 						MSPType: "bccsp",
 						Name:    "SampleOrg",
+						Hash: &genesisconfig.Hash{
+							HashFamily:   bccsp.SHA2,
+							HashFunction: bccsp.SHA256,
+						},
 					},
 				},
 				ACLs: map[string]string{
@@ -396,6 +410,10 @@ var _ = Describe("Encoder", func() {
 				ID:      "SampleMSP",
 				MSPType: "bccsp",
 				Name:    "SampleOrg",
+				Hash: &genesisconfig.Hash{
+					HashFamily:   bccsp.SHA2,
+					HashFunction: bccsp.SHA256,
+				},
 			}
 		})
 
@@ -460,6 +478,10 @@ var _ = Describe("Encoder", func() {
 					"bar:8050",
 				},
 				AdminPrincipal: "Role.ADMIN",
+				Hash: &genesisconfig.Hash{
+					HashFamily:   bccsp.SHA2,
+					HashFunction: bccsp.SHA256,
+				},
 			}
 		})
 
@@ -572,6 +594,10 @@ var _ = Describe("Encoder", func() {
 						Port: 5555,
 					},
 				},
+				Hash: &genesisconfig.Hash{
+					HashFamily:   bccsp.SHA2,
+					HashFunction: bccsp.SHA256,
+				},
 			}
 		})
 
@@ -672,6 +698,10 @@ var _ = Describe("Encoder", func() {
 									Port: 1111,
 								},
 							},
+							Hash: &genesisconfig.Hash{
+								HashFamily:   bccsp.SHA2,
+								HashFunction: bccsp.SHA256,
+							},
 						},
 					},
 					Policies: map[string]*genesisconfig.Policy{
@@ -755,6 +785,10 @@ var _ = Describe("Encoder", func() {
 											Host: "hostname",
 											Port: 5555,
 										},
+									},
+									Hash: &genesisconfig.Hash{
+										HashFamily:   bccsp.SHA2,
+										HashFunction: bccsp.SHA256,
 									},
 								},
 							},
@@ -922,12 +956,20 @@ var _ = Describe("Encoder", func() {
 										Port: 5555,
 									},
 								},
+								Hash: &genesisconfig.Hash{
+									HashFamily:   bccsp.SHA2,
+									HashFunction: bccsp.SHA256,
+								},
 							},
 							{
 								MSPDir:  "../../../../sampleconfig/msp",
 								ID:      "Org2MSP",
 								MSPType: "bccsp",
 								Name:    "Org2",
+								Hash: &genesisconfig.Hash{
+									HashFamily:   bccsp.SHA2,
+									HashFunction: bccsp.SHA256,
+								},
 							},
 						},
 					},
@@ -945,12 +987,20 @@ var _ = Describe("Encoder", func() {
 									ID:      "Org1MSP",
 									MSPType: "bccsp",
 									Name:    "Org1",
+									Hash: &genesisconfig.Hash{
+										HashFamily:   bccsp.SHA2,
+										HashFunction: bccsp.SHA256,
+									},
 								},
 								{
 									MSPDir:  "../../../../sampleconfig/msp",
 									ID:      "Org2MSP",
 									MSPType: "bccsp",
 									Name:    "Org2",
+									Hash: &genesisconfig.Hash{
+										HashFamily:   bccsp.SHA2,
+										HashFunction: bccsp.SHA256,
+									},
 								},
 							},
 						},
@@ -1023,12 +1073,20 @@ var _ = Describe("Encoder", func() {
 								ID:      "Org1MSP",
 								MSPType: "bccsp",
 								Name:    "Org1",
+								Hash: &genesisconfig.Hash{
+									HashFamily:   bccsp.SHA2,
+									HashFunction: bccsp.SHA256,
+								},
 							},
 							{
 								MSPDir:  "../../../../sampleconfig/msp",
 								ID:      "Org2MSP",
 								MSPType: "bccsp",
 								Name:    "Org2",
+								Hash: &genesisconfig.Hash{
+									HashFamily:   bccsp.SHA2,
+									HashFunction: bccsp.SHA256,
+								},
 							},
 						},
 					},
@@ -1083,8 +1141,14 @@ var _ = Describe("Encoder", func() {
 					},
 					Application: &genesisconfig.Application{
 						Organizations: []*genesisconfig.Organization{
-							{Name: "Org1"},
-							{Name: "Org2"},
+							{Name: "Org1", Hash: &genesisconfig.Hash{
+								HashFamily:   bccsp.SHA2,
+								HashFunction: bccsp.SHA256,
+							}},
+							{Name: "Org2", Hash: &genesisconfig.Hash{
+								HashFamily:   bccsp.SHA2,
+								HashFunction: bccsp.SHA256,
+							}},
 						},
 					},
 				}
@@ -1102,12 +1166,20 @@ var _ = Describe("Encoder", func() {
 									ID:      "Org1MSP",
 									MSPType: "bccsp",
 									Name:    "Org1",
+									Hash: &genesisconfig.Hash{
+										HashFamily:   bccsp.SHA2,
+										HashFunction: bccsp.SHA256,
+									},
 								},
 								{
 									MSPDir:  "../../../../sampleconfig/msp",
 									ID:      "Org2MSP",
 									MSPType: "bccsp",
 									Name:    "Org2",
+									Hash: &genesisconfig.Hash{
+										HashFamily:   bccsp.SHA2,
+										HashFunction: bccsp.SHA256,
+									},
 								},
 							},
 						},

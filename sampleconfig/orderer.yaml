@@ -156,6 +156,11 @@ General:
         # client's time as specified in a client request message
         TimeWindow: 15m
 
+    # Hash function used
+    Hash:
+        hashFamily: SHA2
+        hashFunction: SHA256
+
 
 ################################################################################
 #

@@ -254,10 +254,12 @@ func initMSP() {
 	var mspMgrConfigDir = config2.GetPath("peer.mspConfigPath")
 	var mspID = viper.GetString("peer.localMspId")
 	var mspType = viper.GetString("peer.localMspType")
+	var hashFamily = viper.GetString("peer.hash.hashFamily")
+	var hashFunction = viper.GetString("peer.hash.hashFunction")
 	if mspType == "" {
 		mspType = msp.ProviderTypeToString(msp.FABRIC)
 	}
-	err := common2.InitCrypto(mspMgrConfigDir, mspID, mspType)
+	err := common2.InitCrypto(mspMgrConfigDir, mspID, mspType, hashFamily, hashFunction)
 	if err != nil { // Handle errors reading the config file
 		panic(fmt.Sprintf("Cannot run client because %s", err.Error()))
 	}

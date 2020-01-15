@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/bccsp/sw"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/stretchr/testify/assert"
@@ -79,7 +81,7 @@ func TestRevokedIntermediateCA(t *testing.T) {
 	// 2) cacert is the CA that signed the intermediate;
 	// 3) a revocation list that revokes the intermediate CA cert
 	dir := "testdata/revokedica"
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)

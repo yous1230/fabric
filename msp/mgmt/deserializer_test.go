@@ -11,6 +11,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hyperledger/fabric/bccsp"
+
 	"github.com/hyperledger/fabric/core/config/configtest"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/stretchr/testify/assert"
@@ -64,7 +66,7 @@ func TestMain(m *testing.M) {
 		os.Exit(-1)
 	}
 
-	testConf, err := msp.GetLocalMspConfig(mspDir, nil, "SampleOrg")
+	testConf, err := msp.GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
