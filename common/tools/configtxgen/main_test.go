@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/hyperledger/fabric/bccsp"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -126,7 +127,10 @@ func TestBadAnchorPeersUpdates(t *testing.T) {
 	assert.Error(t, doOutputAnchorPeersUpdate(config, "foo", configTxDest, genesisconfig.SampleOrgName), "Bad anchorPeerUpdate request")
 	config.Application = backupApplication
 
-	config.Application.Organizations[0] = &genesisconfig.Organization{Name: "FakeOrg", ID: "FakeOrg"}
+	config.Application.Organizations[0] = &genesisconfig.Organization{Name: "FakeOrg", ID: "FakeOrg", Hash: &genesisconfig.Hash{
+		HashFamily:   bccsp.SHA2,
+		HashFunction: bccsp.SHA256,
+	},}
 	assert.Error(t, doOutputAnchorPeersUpdate(config, "foo", configTxDest, genesisconfig.SampleOrgName), "Bad anchorPeerUpdate request - fake org")
 }
 
@@ -196,7 +200,10 @@ func TestPrintOrg(t *testing.T) {
 	assert.Error(t, err, "Bad org name")
 	assert.Regexp(t, "organization [^ ]* not found", err.Error())
 
-	config.Organizations[0] = &genesisconfig.Organization{Name: "FakeOrg", ID: "FakeOrg"}
+	config.Organizations[0] = &genesisconfig.Organization{Name: "FakeOrg", ID: "FakeOrg", Hash: &genesisconfig.Hash{
+		HashFamily:   bccsp.SHA2,
+		HashFunction: bccsp.SHA256,
+	},}
 	err = doPrintOrg(config, "FakeOrg")
 	assert.Error(t, err, "Fake org")
 	assert.Regexp(t, "bad org definition", err.Error())
