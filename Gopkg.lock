@@ -733,19 +733,19 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:34109bb69e67d84209d305ebbd3c36973636b16d983fc60b80d7b32e4283a708"
+  digest = "1:208e9537706f969f0ff5f0f643a8652b720b0cc484a4952c52bd2af774b30fa2"
   name = "github.com/zhigui-projects/tls"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "1cffc53772dcb340d9f53c438b26dbdeb763a397"
+  revision = "1c29b1879bebaa90d159809fdc08bb5fd56474eb"
 
 [[projects]]
   branch = "master"
-  digest = "1:bd41e11b32a55cb401fde408291271ec8dcf61d008c84c7cc74f19defc6e1700"
+  digest = "1:7ce92547d79e89c13871675c4736b74b85bd43348e6b979b0240bb6b2e1f8226"
   name = "github.com/zhigui-projects/x509"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "88b81d9200e4747bbadda3980ac8b83ce9b9022a"
+  revision = "a69e03e349659ebffa4948e2cf54f34c20641eff"
 
 [[projects]]
   digest = "1:7994f0511ea39eb049909df41301aabf5e6289b97c1084f7cc8c351d765469e1"

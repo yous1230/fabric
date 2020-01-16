@@ -935,8 +935,8 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) x.PublicKeyAlgorith
 		return x.DSA
 	case oid.Equal(oidPublicKeyECDSA):
 		return x.ECDSA
-//	case oid.Equal(oidPublicKeyEd25519):
-//		return x.Ed25519
+		//	case oid.Equal(oidPublicKeyEd25519):
+		//		return x.Ed25519
 	}
 	return x.UnknownPublicKeyAlgorithm
 }
