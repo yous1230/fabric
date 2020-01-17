@@ -45,7 +45,7 @@ func ComputeHash(contents []byte, hash []byte) []byte {
 	copy(newSlice[len(contents):], hash[:])
 
 	//compute new hash
-	hash = util.ComputeSHA256(newSlice)
+	hash = util.ComputeHash(newSlice)
 
 	return hash
 }

@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger/fabric/common/util"
+
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -155,6 +157,7 @@ func InitCrypto(mspMgrConfigDir, localMSPID, localMSPType, hashFamily, hashFunct
 		return errors.WithMessage(err, fmt.Sprintf("error when setting up MSP of type %s from directory %s", localMSPType, mspMgrConfigDir))
 	}
 
+	util.InitDefaultHash(hashFunction)
 	return nil
 }
 

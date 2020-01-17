@@ -296,7 +296,7 @@ func (r *Reconciler) groupRwsetByBlock(elements []*gossip2.PvtDataElement) map[u
 			rwSetByBlockByKeys[dig.BlockSeq] = make(map[rwSetKey][]byte)
 		}
 		for _, rws := range element.Payload {
-			hash := hex.EncodeToString(util2.ComputeSHA256(rws))
+			hash := hex.EncodeToString(util2.ComputeHash(rws))
 			key := rwSetKey{
 				txID:       dig.TxId,
 				namespace:  dig.Namespace,

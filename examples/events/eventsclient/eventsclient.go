@@ -220,7 +220,7 @@ func main() {
 	}
 
 	if mTlsEnabled {
-		events.tlsCertHash = util.ComputeSHA256(grpcClient.Certificate().Certificate[0])
+		events.tlsCertHash = util.ComputeHash(grpcClient.Certificate().Certificate[0])
 	}
 
 	events.seek(seek)

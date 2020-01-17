@@ -33,7 +33,7 @@ func TestHashContentChange(t *testing.T) {
 		t.Skip("Skipping TestHashContentChange")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	b2 := []byte("To be, or not to be- that is the question: Whether 'tis nobler in the mind to suffer The slings and arrows of outrageous fortune Or to take arms against a sea of troubles, And by opposing end them. To die- to sleep- No more; and by a sleep to say we end The heartache, and the thousand natural shocks That flesh is heir to. 'Tis a consummation Devoutly to be wish'd.")
 
@@ -71,7 +71,7 @@ func TestHashLenChange(t *testing.T) {
 		t.Skip("Skipping TestHashLenChange")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	b2 := []byte("To be, or not to be-")
 
@@ -96,7 +96,7 @@ func TestHashOrderChange(t *testing.T) {
 		t.Skip("Skipping TestHashOrderChange")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	b2 := [][]byte{[]byte("To be, or not to be- that is the question:"),
 		[]byte("Whether 'tis nobler in the mind to suffer"),
@@ -148,7 +148,7 @@ func TestHashOverFiles(t *testing.T) {
 		t.Skip("Skipping TestHashOverFiles")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	hash, err := HashFilesInDir(".", "hashtestfiles1", hash, nil)
 
@@ -172,7 +172,7 @@ func TestHashDiffDir(t *testing.T) {
 		t.Skip("Skipping TestHashDiffDir")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	hash1, err := HashFilesInDir(".", "hashtestfiles1", hash, nil)
 	if err != nil {
@@ -194,7 +194,7 @@ func TestHashSameDir(t *testing.T) {
 	assert := assert.New(t)
 
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 	hash1, err := HashFilesInDir(".", "hashtestfiles1", hash, nil)
 	assert.NoError(err, "Error getting code")
 
@@ -219,7 +219,7 @@ func TestHashBadWriter(t *testing.T) {
 		t.Skip("Skipping TestHashBadWriter")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 
 	fname := os.TempDir() + "/hash.tar"
 	w, err := os.Create(fname)
@@ -242,7 +242,7 @@ func TestHashNonExistentDir(t *testing.T) {
 		t.Skip("Skipping TestHashNonExistentDir")
 	}
 	b := []byte("firstcontent")
-	hash := util.ComputeSHA256(b)
+	hash := util.ComputeHash(b)
 	_, err := HashFilesInDir(".", "idontexist", hash, nil)
 	assert.Error(t, err, "Expected an error for non existent directory idontexist")
 }

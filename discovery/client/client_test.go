@@ -384,7 +384,7 @@ func TestClient(t *testing.T) {
 	}
 	authInfo := &discovery.AuthInfo{
 		ClientIdentity:    []byte{1, 2, 3},
-		ClientTlsCertHash: util.ComputeSHA256(clientTLSCert.Certificate[0]),
+		ClientTlsCertHash: util.ComputeHash(clientTLSCert.Certificate[0]),
 	}
 	cl := NewClient(connect, signer, signerCacheSize)
 

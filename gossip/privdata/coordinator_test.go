@@ -640,7 +640,7 @@ func TestCoordinatorStoreInvalidBlock(t *testing.T) {
 		Signature: []byte{3, 4, 5},
 		Data:      []byte{6, 7, 8},
 	}
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	committer := &mocks.Committer{}
 	committer.On("CommitWithPvtData", mock.Anything, mock.Anything).Run(func(args mock.Arguments) {
 		t.Fatal("Shouldn't have committed")
@@ -952,7 +952,7 @@ func TestCoordinatorToFilterOutPvtRWSetsWithWrongHash(t *testing.T) {
 		assert.Equal(t, expectedCommitOpts, commitOpts)
 	}).Return(nil)
 
-	hash := util2.ComputeSHA256([]byte("rws-original"))
+	hash := util2.ComputeHash([]byte("rws-original"))
 	bf := &blockFactory{
 		channelID: "test",
 	}
@@ -1056,7 +1056,7 @@ func TestCoordinatorStoreBlock(t *testing.T) {
 
 	fetcher := &fetcherMock{t: t}
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	pdFactory := &pvtDataFactory{}
 	bf := &blockFactory{
 		channelID: "test",
@@ -1307,7 +1307,7 @@ func TestCoordinatorStoreBlockWhenPvtDataExistInLedger(t *testing.T) {
 
 	fetcher := &fetcherMock{t: t}
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	pdFactory := &pvtDataFactory{}
 	bf := &blockFactory{
 		channelID: "test",
@@ -1408,7 +1408,7 @@ func TestProceedWithoutPrivateData(t *testing.T) {
 		},
 	}, nil)
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	pdFactory := &pvtDataFactory{}
 	bf := &blockFactory{
 		channelID: "test",
@@ -1471,7 +1471,7 @@ func TestProceedWithInEligiblePrivateData(t *testing.T) {
 		assert.Equal(t, expectedCommitOpts, commitOpts)
 	}).Return(nil)
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	bf := &blockFactory{
 		channelID: "test",
 	}
@@ -1524,7 +1524,7 @@ func TestCoordinatorGetBlocks(t *testing.T) {
 		CapabilityProvider: capabilityProvider,
 	}, sd, metrics, testConfig)
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	bf := &blockFactory{
 		channelID: "test",
 	}
@@ -1706,7 +1706,7 @@ func TestIgnoreReadOnlyColRWSets(t *testing.T) {
 	store := &mockTransientStore{t: t}
 
 	fetcher := &fetcherMock{t: t}
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	bf := &blockFactory{
 		channelID: "test",
 	}
@@ -1749,7 +1749,7 @@ func TestCoordinatorMetrics(t *testing.T) {
 	store := &mockTransientStore{t: t}
 	store.On("PurgeByTxids", mock.Anything).Return(nil)
 
-	hash := util2.ComputeSHA256([]byte("rws-pre-image"))
+	hash := util2.ComputeHash([]byte("rws-pre-image"))
 	pdFactory := &pvtDataFactory{}
 	bf := &blockFactory{
 		channelID: "test",

@@ -62,7 +62,7 @@ func (r *certMapper) genCert(name string) (*tlsgen.CertKeyPair, error) {
 	if err != nil {
 		return nil, err
 	}
-	hash := util.ComputeSHA256(keyPair.TLSCert.Raw)
+	hash := util.ComputeHash(keyPair.TLSCert.Raw)
 	r.register(certHash(hash), name)
 	return keyPair, nil
 }
@@ -91,5 +91,5 @@ func extractCertificateHashFromContext(ctx context.Context) []byte {
 	if len(raw) == 0 {
 		return nil
 	}
-	return util.ComputeSHA256(raw)
+	return util.ComputeHash(raw)
 }

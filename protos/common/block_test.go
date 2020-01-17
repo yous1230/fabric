@@ -45,7 +45,7 @@ func TestBlock(t *testing.T) {
 		DataHash:     data.Hash(),
 		PreviousHash: []byte("datahash"),
 	})
-	headerHash := util.ComputeSHA256(asn1Bytes)
+	headerHash := util.ComputeHash(asn1Bytes)
 	assert.NoError(t, err)
 	assert.Equal(t, asn1Bytes, block.Header.Bytes(), "Incorrect marshaled blockheader bytes")
 	assert.Equal(t, headerHash, block.Header.Hash(), "Incorrect blockheader hash")
