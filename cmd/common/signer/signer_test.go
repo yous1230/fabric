@@ -31,7 +31,7 @@ func TestSigner(t *testing.T) {
 	assert.NoError(t, err)
 
 	r, s, err := utils.UnmarshalECDSASignature(sig)
-	ecdsa.Verify(&signer.key.PublicKey, util.ComputeSHA256(msg), r, s)
+	ecdsa.Verify(&signer.key.PublicKey, util.ComputeHash(msg), r, s)
 }
 
 func TestSignerBadConfig(t *testing.T) {

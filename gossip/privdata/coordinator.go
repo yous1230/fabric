@@ -330,7 +330,7 @@ func (c *coordinator) fetchFromPeers(blockSeq uint64, ownedRWsets map[rwSetKey][
 	for _, element := range fetchedData.AvailableElements {
 		dig := element.Digest
 		for _, rws := range element.Payload {
-			hash := hex.EncodeToString(util2.ComputeSHA256(rws))
+			hash := hex.EncodeToString(util2.ComputeHash(rws))
 			key := rwSetKey{
 				txID:       dig.TxId,
 				namespace:  dig.Namespace,
@@ -405,7 +405,7 @@ func (c *coordinator) fetchFromTransientStore(txAndSeq txAndSeqInBlock, filter l
 					seqInBlock: txAndSeq.seqInBlock,
 					collection: col.CollectionName,
 					namespace:  ns.Namespace,
-					hash:       hex.EncodeToString(util2.ComputeSHA256(col.Rwset)),
+					hash:       hex.EncodeToString(util2.ComputeHash(col.Rwset)),
 				}
 				// populate the ownedRWsets with the RW set from the transient store
 				ownedRWsets[key] = col.Rwset
@@ -439,7 +439,7 @@ func computeOwnedRWsets(block *common.Block, blockPvtData util.PvtDataCollection
 		}
 		for _, ns := range txPvtData.WriteSet.NsPvtRwset {
 			for _, col := range ns.CollectionPvtRwset {
-				computedHash := hex.EncodeToString(util2.ComputeSHA256(col.Rwset))
+				computedHash := hex.EncodeToString(util2.ComputeHash(col.Rwset))
 				ownedRWsets[rwSetKey{
 					txID:       chdr.TxId,
 					seqInBlock: txPvtData.SeqInBlock,

@@ -474,13 +474,13 @@ func TestSignAndVerifyFailures(t *testing.T) {
 		return
 	}
 
-	hash := id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily
-	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = "barf"
+	hash := id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction
+	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = "barf"
 
 	sig, err := id.Sign(msg)
 	assert.Error(t, err)
 
-	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = hash
+	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = hash
 
 	sig, err = id.Sign(msg)
 	if err != nil {
@@ -488,12 +488,12 @@ func TestSignAndVerifyFailures(t *testing.T) {
 		return
 	}
 
-	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = "barf"
+	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = "barf"
 
 	err = id.Verify(msg, sig)
 	assert.Error(t, err)
 
-	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = hash
+	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = hash
 }
 
 func TestSignAndVerifyOtherHash(t *testing.T) {

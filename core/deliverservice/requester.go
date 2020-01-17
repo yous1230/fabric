@@ -58,7 +58,7 @@ func (b *blocksRequester) RequestBlocks(ledgerInfoProvider blocksprovider.Ledger
 
 func (b *blocksRequester) getTLSCertHash() []byte {
 	if b.tls {
-		return util.ComputeSHA256(comm.GetCredentialSupport().GetClientCertificate().Certificate[0])
+		return util.ComputeHash(comm.GetCredentialSupport().GetClientCertificate().Certificate[0])
 	}
 	return nil
 }

@@ -572,7 +572,7 @@ func (dig *PvtDataDigest) Hash() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(util.ComputeSHA256(b)), nil
+	return hex.EncodeToString(util.ComputeHash(b)), nil
 }
 
 // ToString returns a string representation of this RemotePvtDataResponse

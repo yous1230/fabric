@@ -169,7 +169,7 @@ func NewDeliverClientForOrderer(channelID string, bestEffort bool) (*DeliverClie
 	}
 	// check for client certificate and create hash if present
 	if len(oc.Certificate().Certificate) > 0 {
-		tlsCertHash = util.ComputeSHA256(oc.Certificate().Certificate[0])
+		tlsCertHash = util.ComputeHash(oc.Certificate().Certificate[0])
 	}
 	ds := &ordererDeliverService{dc}
 	o := &DeliverClient{
@@ -200,7 +200,7 @@ func NewDeliverClientForPeer(channelID string, bestEffort bool) (*DeliverClient,
 
 	// check for client certificate and create hash if present
 	if len(pc.Certificate().Certificate) > 0 {
-		tlsCertHash = util.ComputeSHA256(pc.Certificate().Certificate[0])
+		tlsCertHash = util.ComputeHash(pc.Certificate().Certificate[0])
 	}
 	ds := &peerDeliverService{d}
 	p := &DeliverClient{

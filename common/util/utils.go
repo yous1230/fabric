@@ -35,10 +35,19 @@ type alg struct {
 	hashFun func([]byte) string
 }
 
-const defaultAlg = "sha256"
+var defaultAlg = bccsp.SHA256
 
-var availableIDgenAlgs = map[string]alg{
-	defaultAlg: {GenerateIDfromTxSHAHash},
+func InitDefaultHash(hashFunction string) {
+	defaultAlg = hashFunction
+}
+
+func ComputeHash(data []byte) (hash []byte) {
+	opts, err := bccsp.GetHashOpt(defaultAlg)
+	hash, err = factory.GetDefault().Hash(data, opts)
+	if err != nil {
+		panic(fmt.Errorf("Failed computing hash on [% x]", data))
+	}
+	return
 }
 
 // ComputeSHA256 returns SHA2-256 on data
@@ -55,6 +64,15 @@ func ComputeSHA3256(data []byte) (hash []byte) {
 	hash, err := factory.GetDefault().Hash(data, &bccsp.SHA3_256Opts{})
 	if err != nil {
 		panic(fmt.Errorf("Failed computing SHA3_256 on [% x]", data))
+	}
+	return
+}
+
+// ComputeGMSM3 returns GMSM3 on data
+func ComputeGMSM3(data []byte) (hash []byte) {
+	hash, err := factory.GetDefault().Hash(data, &bccsp.GMSM3Opts{})
+	if err != nil {
+		panic(fmt.Errorf("Failed computing GMSM3 on [% x]", data))
 	}
 	return
 }
@@ -95,28 +113,6 @@ func CreateUtcTimestamp() *timestamp.Timestamp {
 	secs := now.Unix()
 	nanos := int32(now.UnixNano() - (secs * 1000000000))
 	return &(timestamp.Timestamp{Seconds: secs, Nanos: nanos})
-}
-
-//GenerateHashFromSignature returns a hash of the combined parameters
-func GenerateHashFromSignature(path string, args []byte) []byte {
-	return ComputeSHA256(args)
-}
-
-// GenerateIDfromTxSHAHash generates SHA256 hash using Tx payload
-func GenerateIDfromTxSHAHash(payload []byte) string {
-	return fmt.Sprintf("%x", ComputeSHA256(payload))
-}
-
-// GenerateIDWithAlg generates an ID using a custom algorithm
-func GenerateIDWithAlg(customIDgenAlg string, payload []byte) (string, error) {
-	if customIDgenAlg == "" {
-		customIDgenAlg = defaultAlg
-	}
-	var alg = availableIDgenAlgs[customIDgenAlg]
-	if alg.hashFun != nil {
-		return alg.hashFun(payload), nil
-	}
-	return "", fmt.Errorf("Wrong ID generation algorithm was given: %s", customIDgenAlg)
 }
 
 func idBytesToStr(id []byte) string {

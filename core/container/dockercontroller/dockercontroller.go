@@ -455,7 +455,7 @@ func (vm *DockerVM) GetVMName(ccid ccintf.CCID) string {
 // uniqueness.
 func (vm *DockerVM) GetVMNameForDocker(ccid ccintf.CCID) (string, error) {
 	name := vm.preFormatImageName(ccid)
-	hash := hex.EncodeToString(util.ComputeSHA256([]byte(name)))
+	hash := hex.EncodeToString(util.ComputeHash([]byte(name)))
 	saniName := vmRegExp.ReplaceAllString(name, "-")
 	imageName := strings.ToLower(fmt.Sprintf("%s-%s", saniName, hash))
 

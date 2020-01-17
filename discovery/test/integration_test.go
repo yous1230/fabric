@@ -478,7 +478,7 @@ func createClientAndService(t *testing.T, testdir string) (*client, *service) {
 
 	authInfo := &AuthInfo{
 		ClientIdentity:    signer.Creator,
-		ClientTlsCertHash: util.ComputeSHA256(clientKeyPair.TLSCert.Raw),
+		ClientTlsCertHash: util.ComputeHash(clientKeyPair.TLSCert.Raw),
 	}
 
 	dialer, err := comm.NewGRPCClient(comm.ClientConfig{
@@ -744,7 +744,7 @@ func (ps testPeerSet) Contains(peer *testPeer) bool {
 func peersToTestPeers(peers []*disc.Peer) testPeerSet {
 	var res testPeerSet
 	for _, p := range peers {
-		pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeSHA256(p.Identity)))
+		pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeHash(p.Identity)))
 		var stateInfoMember gdisc.NetworkMember
 		if p.StateInfoMessage != nil {
 			stateInfo, _ := p.StateInfoMessage.ToGossipMessage()
@@ -783,7 +783,7 @@ func newPeer(dir, mspID string, org, id int) *testPeer {
 		IdBytes: certBytes,
 	}
 	identityBytes := utils.MarshalOrPanic(sID)
-	pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeSHA256(identityBytes)))
+	pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeHash(identityBytes)))
 	return &testPeer{
 		mspID:        mspID,
 		identity:     identityBytes,
@@ -918,7 +918,7 @@ func serializeIdentity(clientCert string, mspID string) ([]byte, error) {
 }
 
 func (si *signer) Sign(msg []byte) ([]byte, error) {
-	digest := util.ComputeSHA256(msg)
+	digest := util.ComputeHash(msg)
 	return signECDSA(si.key, digest)
 }
 

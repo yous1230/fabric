@@ -77,7 +77,7 @@ func (s *Store) Save(name, version string, ccInstallPkg []byte) ([]byte, error) 
 		return nil, err
 	}
 
-	hash := util.ComputeSHA256(ccInstallPkg)
+	hash := util.ComputeHash(ccInstallPkg)
 	hashString := hex.EncodeToString(hash)
 	metadataPath := filepath.Join(s.Path, hashString+".json")
 	if _, err := s.ReadWriter.Stat(metadataPath); err == nil {
