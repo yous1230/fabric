@@ -125,6 +125,9 @@ type ConsenterSupport interface {
 	// Append appends a new block to the ledger in its raw form,
 	// unlike WriteBlock that also mutates its metadata.
 	Append(block *cb.Block) error
+
+	// IsSysChannel returns Whether the channelthis support is associated with is system channel.
+	IsSysChannel() bool
 }
 
 // NoOpMetadataValidator implements a MetadataValidator that always returns nil error irrespecttive of the inputs.

@@ -97,6 +97,16 @@ type FakeConsenterSupport struct {
 	heightReturnsOnCall map[int]struct {
 		result1 uint64
 	}
+	IsSysChannelStub        func() bool
+	isSysChannelMutex       sync.RWMutex
+	isSysChannelArgsForCall []struct {
+	}
+	isSysChannelReturns struct {
+		result1 bool
+	}
+	isSysChannelReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	ProcessConfigMsgStub        func(*common.Envelope) (*common.Envelope, uint64, error)
 	processConfigMsgMutex       sync.RWMutex
 	processConfigMsgArgsForCall []struct {
@@ -663,6 +673,58 @@ func (fake *FakeConsenterSupport) HeightReturnsOnCall(i int, result1 uint64) {
 	}
 	fake.heightReturnsOnCall[i] = struct {
 		result1 uint64
+	}{result1}
+}
+
+func (fake *FakeConsenterSupport) IsSysChannel() bool {
+	fake.isSysChannelMutex.Lock()
+	ret, specificReturn := fake.isSysChannelReturnsOnCall[len(fake.isSysChannelArgsForCall)]
+	fake.isSysChannelArgsForCall = append(fake.isSysChannelArgsForCall, struct {
+	}{})
+	fake.recordInvocation("IsSysChannel", []interface{}{})
+	fake.isSysChannelMutex.Unlock()
+	if fake.IsSysChannelStub != nil {
+		return fake.IsSysChannelStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.isSysChannelReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeConsenterSupport) IsSysChannelCallCount() int {
+	fake.isSysChannelMutex.RLock()
+	defer fake.isSysChannelMutex.RUnlock()
+	return len(fake.isSysChannelArgsForCall)
+}
+
+func (fake *FakeConsenterSupport) IsSysChannelCalls(stub func() bool) {
+	fake.isSysChannelMutex.Lock()
+	defer fake.isSysChannelMutex.Unlock()
+	fake.IsSysChannelStub = stub
+}
+
+func (fake *FakeConsenterSupport) IsSysChannelReturns(result1 bool) {
+	fake.isSysChannelMutex.Lock()
+	defer fake.isSysChannelMutex.Unlock()
+	fake.IsSysChannelStub = nil
+	fake.isSysChannelReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeConsenterSupport) IsSysChannelReturnsOnCall(i int, result1 bool) {
+	fake.isSysChannelMutex.Lock()
+	defer fake.isSysChannelMutex.Unlock()
+	fake.IsSysChannelStub = nil
+	if fake.isSysChannelReturnsOnCall == nil {
+		fake.isSysChannelReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isSysChannelReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
 }
 
@@ -1247,6 +1309,8 @@ func (fake *FakeConsenterSupport) Invocations() map[string][][]interface{} {
 	defer fake.createNextBlockMutex.RUnlock()
 	fake.heightMutex.RLock()
 	defer fake.heightMutex.RUnlock()
+	fake.isSysChannelMutex.RLock()
+	defer fake.isSysChannelMutex.RUnlock()
 	fake.processConfigMsgMutex.RLock()
 	defer fake.processConfigMsgMutex.RUnlock()
 	fake.processConfigUpdateMsgMutex.RLock()

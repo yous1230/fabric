@@ -68,6 +68,9 @@ type ConsenterSupport struct {
 
 	// BlockVerificationErr is returned by VerifyBlockSignature
 	BlockVerificationErr error
+
+	// IsSysChannelVal is the value returned by IsSysChannel()
+	IsSysChannelVal bool
 }
 
 // Block returns the block with the given number or nil if not found
@@ -176,4 +179,9 @@ func (mcs *ConsenterSupport) Append(block *cb.Block) error {
 	mcs.HeightVal++
 	mcs.Blocks <- block
 	return nil
+}
+
+// IsSysChannel returns Whether the channelthis support is associated with is system channel.
+func (mcs *ConsenterSupport) IsSysChannel() bool {
+	return mcs.IsSysChannelVal
 }

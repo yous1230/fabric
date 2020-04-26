@@ -34,6 +34,7 @@ type ChainSupport struct {
 	// that there is a single consensus type at this orderer node and therefore the resolution of
 	// the consensus type too happens only at the ChainSupport level.
 	consensus.MetadataValidator
+	isSysChannel bool
 }
 
 func newChainSupport(
@@ -62,7 +63,8 @@ func newChainSupport(
 			ledgerResources,
 			blockcutterMetrics,
 		),
-		BCCSP: bccsp,
+		BCCSP:        bccsp,
+		isSysChannel: ledgerResources.ConfigtxValidator().ChannelID() == registrar.systemChannelID,
 	}
 
 	// Set up the msgprocessor
@@ -211,4 +213,9 @@ func (cs *ChainSupport) VerifyBlockSignature(sd []*protoutil.SignedData, envelop
 		return errors.Wrap(err, "block verification failed")
 	}
 	return nil
+}
+
+// IsSysChannel returns Whether the channelthis support is associated with is system channel.
+func (cs *ChainSupport) IsSysChannel() bool {
+	return cs.isSysChannel
 }

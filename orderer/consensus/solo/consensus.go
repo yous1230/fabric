@@ -53,7 +53,13 @@ func newChain(support consensus.ConsenterSupport) *chain {
 }
 
 func (ch *chain) Start() {
-	go ch.main()
+	if ch.support.IsSysChannel() {
+		logger.Infof("Start system channel [%s] msg handle", ch.support.ChannelID())
+		go ch.main()
+	} else {
+		logger.Infof("Start application channel [%s] msg handle", ch.support.ChannelID())
+		go ch.mainWithNilBlock()
+	}
 }
 
 func (ch *chain) Halt() {
@@ -101,8 +107,7 @@ func (ch *chain) Errored() <-chan struct{} {
 }
 
 func (ch *chain) main() {
-	//var timer <-chan time.Time
-	var timer *time.Timer
+	var timer <-chan time.Time
 	var err error
 
 	for {
@@ -124,21 +129,16 @@ func (ch *chain) main() {
 				for _, batch := range batches {
 					block := ch.support.CreateNextBlock(batch)
 					ch.support.WriteBlock(block, nil)
-					logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
+					logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
 				}
 
 				switch {
 				case timer != nil && !pending:
 					// Timer is already running but there are no messages pending, stop the timer
-					//timer = nil
-					if !timer.Stop() {
-						<-timer.C
-					}
-					timer.Reset(ch.support.SharedConfig().BatchTimeout())
-				case timer == nil:
+					timer = nil
+				case timer == nil && pending:
 					// Timer is not already running and there are messages pending, so start it
-					//timer = time.After(ch.support.SharedConfig().BatchTimeout())
-					timer = time.NewTimer(ch.support.SharedConfig().BatchTimeout())
+					timer = time.After(ch.support.SharedConfig().BatchTimeout())
 					logger.Debugf("Just began %s batch timer", ch.support.SharedConfig().BatchTimeout().String())
 				default:
 					// Do nothing when:
@@ -159,29 +159,104 @@ func (ch *chain) main() {
 				if batch != nil {
 					block := ch.support.CreateNextBlock(batch)
 					ch.support.WriteBlock(block, nil)
-					logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
+					logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
+				}
+
+				block := ch.support.CreateNextBlock([]*cb.Envelope{msg.configMsg})
+				ch.support.WriteConfigBlock(block, nil)
+				timer = nil
+				logger.Infof("Writing config block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
+			}
+		case <-timer:
+			//clear the timer
+			timer = nil
+
+			batch := ch.support.BlockCutter().Cut()
+			if len(batch) == 0 {
+				logger.Warningf("Batch timer expired with no pending requests, this might indicate a bug")
+				continue
+			}
+			logger.Infof("Batch timer expired, creating block")
+			block := ch.support.CreateNextBlock(batch)
+			ch.support.WriteBlock(block, nil)
+			logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
+		case <-ch.exitChan:
+			logger.Debugf("Exiting")
+			return
+		}
+	}
+}
+
+func (ch *chain) mainWithNilBlock() {
+	//var timer <-chan time.Time
+	var timer *time.Timer
+	var timeoutC <-chan time.Time
+	var err error
+	var resetTimer = func() {
+		if !timer.Stop() {
+			<-timer.C
+		}
+		timer.Reset(ch.support.SharedConfig().BatchTimeout())
+	}
+
+	for {
+		seq := ch.support.Sequence()
+		err = nil
+		select {
+		case msg := <-ch.sendChan:
+			if msg.configMsg == nil {
+				// NormalMsg
+				if msg.configSeq < seq {
+					_, err = ch.support.ProcessNormalMsg(msg.normalMsg)
+					if err != nil {
+						logger.Warningf("Discarding bad normal message: %s", err)
+						continue
+					}
+				}
+				batches, pending := ch.support.BlockCutter().Ordered(msg.normalMsg)
+
+				for _, batch := range batches {
+					block := ch.support.CreateNextBlock(batch)
+					ch.support.WriteBlock(block, nil)
+					logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
+				}
+
+				if !pending {
+					resetTimer()
+				}
+			} else {
+				// ConfigMsg
+				if msg.configSeq < seq {
+					msg.configMsg, _, err = ch.support.ProcessConfigMsg(msg.configMsg)
+					if err != nil {
+						logger.Warningf("Discarding bad config message: %s", err)
+						continue
+					}
+				}
+				batch := ch.support.BlockCutter().Cut()
+				if batch != nil {
+					block := ch.support.CreateNextBlock(batch)
+					ch.support.WriteBlock(block, nil)
+					logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
 				}
 
 				block := ch.support.CreateNextBlock([]*cb.Envelope{msg.configMsg})
 				ch.support.WriteConfigBlock(block, nil)
 				if timer == nil {
 					timer = time.NewTimer(ch.support.SharedConfig().BatchTimeout())
+					timeoutC = timer.C
+				} else {
+					resetTimer()
 				}
-				logger.Infof("Writing config block [%d] (solo) to ledger", block.Header.Number)
+				logger.Infof("Writing config block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
 			}
-		case <-timer.C:
-			//clear the timer
-			//timer = nil
-
+		case <-timeoutC:
 			batch := ch.support.BlockCutter().Cut()
-			//if len(batch) == 0 {
-			//	logger.Warningf("Batch timer expired with no pending requests, this might indicate a bug")
-			//	continue
-			//}
 			logger.Infof("Batch timer expired, creating block")
 			block := ch.support.CreateNextBlock(batch)
 			ch.support.WriteBlock(block, nil)
-			logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
+			logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
+			resetTimer()
 		case <-ch.exitChan:
 			logger.Debugf("Exiting")
 			return
