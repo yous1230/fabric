@@ -101,7 +101,8 @@ func (ch *chain) Errored() <-chan struct{} {
 }
 
 func (ch *chain) main() {
-	var timer <-chan time.Time
+	//var timer <-chan time.Time
+	var timer *time.Timer
 	var err error
 
 	for {
@@ -123,15 +124,21 @@ func (ch *chain) main() {
 				for _, batch := range batches {
 					block := ch.support.CreateNextBlock(batch)
 					ch.support.WriteBlock(block, nil)
+					logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
 				}
 
 				switch {
 				case timer != nil && !pending:
 					// Timer is already running but there are no messages pending, stop the timer
-					timer = nil
-				case timer == nil && pending:
+					//timer = nil
+					if !timer.Stop() {
+						<-timer.C
+					}
+					timer.Reset(ch.support.SharedConfig().BatchTimeout())
+				case timer == nil:
 					// Timer is not already running and there are messages pending, so start it
-					timer = time.After(ch.support.SharedConfig().BatchTimeout())
+					//timer = time.After(ch.support.SharedConfig().BatchTimeout())
+					timer = time.NewTimer(ch.support.SharedConfig().BatchTimeout())
 					logger.Debugf("Just began %s batch timer", ch.support.SharedConfig().BatchTimeout().String())
 				default:
 					// Do nothing when:
@@ -152,24 +159,29 @@ func (ch *chain) main() {
 				if batch != nil {
 					block := ch.support.CreateNextBlock(batch)
 					ch.support.WriteBlock(block, nil)
+					logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
 				}
 
 				block := ch.support.CreateNextBlock([]*cb.Envelope{msg.configMsg})
 				ch.support.WriteConfigBlock(block, nil)
-				timer = nil
+				if timer == nil {
+					timer = time.NewTimer(ch.support.SharedConfig().BatchTimeout())
+				}
+				logger.Infof("Writing config block [%d] (solo) to ledger", block.Header.Number)
 			}
-		case <-timer:
+		case <-timer.C:
 			//clear the timer
-			timer = nil
+			//timer = nil
 
 			batch := ch.support.BlockCutter().Cut()
-			if len(batch) == 0 {
-				logger.Warningf("Batch timer expired with no pending requests, this might indicate a bug")
-				continue
-			}
-			logger.Debugf("Batch timer expired, creating block")
+			//if len(batch) == 0 {
+			//	logger.Warningf("Batch timer expired with no pending requests, this might indicate a bug")
+			//	continue
+			//}
+			logger.Infof("Batch timer expired, creating block")
 			block := ch.support.CreateNextBlock(batch)
 			ch.support.WriteBlock(block, nil)
+			logger.Infof("Writing block [%d] (solo) to ledger", block.Header.Number)
 		case <-ch.exitChan:
 			logger.Debugf("Exiting")
 			return
