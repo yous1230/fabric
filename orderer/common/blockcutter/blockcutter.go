@@ -12,6 +12,8 @@ import (
 	cb "github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/flogging"
+	"github.com/hyperledger/fabric/common/util"
+	"github.com/hyperledger/fabric/protoutil"
 )
 
 var logger = flogging.MustGetLogger("orderer.common.blockcutter")
@@ -29,6 +31,9 @@ type Receiver interface {
 
 	// Cut returns the current batch and starts a new one
 	Cut() []*cb.Envelope
+
+	// CutWithNilBlock returns the current batch and starts a new one, if batch is empty create a nil envelope
+	CutWithNilBlock(channelId string) []*cb.Envelope
 }
 
 type receiver struct {
@@ -132,6 +137,33 @@ func (r *receiver) Cut() []*cb.Envelope {
 	batch := r.pendingBatch
 	r.pendingBatch = nil
 	r.pendingBatchSizeBytes = 0
+	return batch
+}
+
+// CutWithNilBlock returns the current batch and starts a new one, if batch is empty create a nil envelope
+func (r *receiver) CutWithNilBlock(channelId string) []*cb.Envelope {
+	if r.pendingBatch != nil {
+		r.Metrics.BlockFillDuration.With("channel", r.ChannelID).Observe(time.Since(r.PendingBatchStartTime).Seconds())
+	}
+	r.PendingBatchStartTime = time.Time{}
+	batch := r.pendingBatch
+	r.pendingBatch = nil
+	r.pendingBatchSizeBytes = 0
+
+	if len(batch) == 0 {
+		env := &cb.Envelope{
+			Payload: protoutil.MarshalOrPanic(&cb.Payload{
+				Header: &cb.Header{
+					ChannelHeader: protoutil.MarshalOrPanic(&cb.ChannelHeader{
+						ChannelId: channelId,
+						Timestamp: util.CreateUtcTimestamp(),
+						Type:      int32(protoutil.HeaderType_NIL_BLOCK),
+					}),
+				},
+			}),
+		}
+		batch = []*cb.Envelope{env}
+	}
 	return batch
 }
 

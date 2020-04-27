@@ -249,7 +249,7 @@ func (ch *chain) mainWithNilBlock() {
 				logger.Infof("Writing config block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
 			}
 		case <-timeoutC:
-			batch := ch.support.BlockCutter().Cut()
+			batch := ch.support.BlockCutter().CutWithNilBlock(ch.support.ChannelID())
 			logger.Infof("Batch timer expired, creating block")
 			block := ch.support.CreateNextBlock(batch)
 			ch.support.WriteBlock(block, nil)

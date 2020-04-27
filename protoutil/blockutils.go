@@ -17,6 +17,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	HeaderType_NIL_BLOCK cb.HeaderType = 9
+)
+
 // NewBlock constructs a block with no data and no metadata.
 func NewBlock(seqNum uint64, previousHash []byte) *cb.Block {
 	block := &cb.Block{}
