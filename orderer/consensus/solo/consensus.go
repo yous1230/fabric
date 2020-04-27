@@ -188,16 +188,14 @@ func (ch *chain) main() {
 }
 
 func (ch *chain) mainWithNilBlock() {
-	//var timer <-chan time.Time
 	var timer *time.Timer
+	defer func() {
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
 	var timeoutC <-chan time.Time
 	var err error
-	var resetTimer = func() {
-		if !timer.Stop() {
-			<-timer.C
-		}
-		timer.Reset(ch.support.SharedConfig().BatchTimeout())
-	}
 
 	for {
 		seq := ch.support.Sequence()
@@ -222,7 +220,7 @@ func (ch *chain) mainWithNilBlock() {
 				}
 
 				if !pending {
-					resetTimer()
+					timer.Reset(ch.support.SharedConfig().BatchTimeout())
 				}
 			} else {
 				// ConfigMsg
@@ -246,7 +244,7 @@ func (ch *chain) mainWithNilBlock() {
 					timer = time.NewTimer(ch.support.SharedConfig().BatchTimeout())
 					timeoutC = timer.C
 				} else {
-					resetTimer()
+					timer.Reset(ch.support.SharedConfig().BatchTimeout())
 				}
 				logger.Infof("Writing config block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
 			}
@@ -256,7 +254,7 @@ func (ch *chain) mainWithNilBlock() {
 			block := ch.support.CreateNextBlock(batch)
 			ch.support.WriteBlock(block, nil)
 			logger.Infof("Writing block [%d] (solo) to ledger [%s]", block.Header.Number, ch.support.ChannelID())
-			resetTimer()
+			timer.Reset(ch.support.SharedConfig().BatchTimeout())
 		case <-ch.exitChan:
 			logger.Debugf("Exiting")
 			return

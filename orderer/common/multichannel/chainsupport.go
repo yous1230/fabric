@@ -64,7 +64,7 @@ func newChainSupport(
 			blockcutterMetrics,
 		),
 		BCCSP:        bccsp,
-		isSysChannel: ledgerResources.ConfigtxValidator().ChannelID() == registrar.systemChannelID,
+		isSysChannel: registrar.systemChannelID == "",
 	}
 
 	// Set up the msgprocessor
