@@ -138,9 +138,11 @@ func validateCommonHeader(hdr *common.Header) (*common.ChannelHeader, *common.Si
 		return nil, nil, err
 	}
 
-	err = validateSignatureHeader(shdr)
-	if err != nil {
-		return nil, nil, err
+	if common.HeaderType(chdr.Type) != protoutil.HeaderType_NIL_BLOCK {
+		err = validateSignatureHeader(shdr)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return chdr, shdr, nil
@@ -272,10 +274,12 @@ func ValidateTransaction(e *common.Envelope, cryptoProvider bccsp.BCCSP) (*commo
 	}
 
 	// validate the signature in the envelope
-	err = checkSignatureFromCreator(shdr.Creator, e.Signature, e.Payload, chdr.ChannelId, cryptoProvider)
-	if err != nil {
-		putilsLogger.Errorf("checkSignatureFromCreator returns err %s", err)
-		return nil, pb.TxValidationCode_BAD_CREATOR_SIGNATURE
+	if common.HeaderType(chdr.Type) != protoutil.HeaderType_NIL_BLOCK {
+		err = checkSignatureFromCreator(shdr.Creator, e.Signature, e.Payload, chdr.ChannelId, cryptoProvider)
+		if err != nil {
+			putilsLogger.Errorf("checkSignatureFromCreator returns err %s", err)
+			return nil, pb.TxValidationCode_BAD_CREATOR_SIGNATURE
+		}
 	}
 
 	// TODO: ensure that creator can transact with us (some ACLs?) which set of APIs is supposed to give us this info?
