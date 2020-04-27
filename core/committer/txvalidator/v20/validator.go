@@ -328,7 +328,7 @@ func (v *TxValidator) validateTx(req *blockValidationRequest, results chan<- *bl
 		var txResult peer.TxValidationCode
 
 		if payload, txResult = validation.ValidateTransaction(env, v.CryptoProvider); txResult != peer.TxValidationCode_VALID {
-			logger.Errorf("Invalid transaction with index %d", tIdx)
+			logger.Errorf("Invalid transaction with index %d, code %d", tIdx, txResult)
 			results <- &blockValidationResult{
 				tIdx:           tIdx,
 				validationCode: txResult,

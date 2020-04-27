@@ -95,6 +95,7 @@ func validateChannelHeader(cHdr *common.ChannelHeader) error {
 	case common.HeaderType_ENDORSER_TRANSACTION:
 	case common.HeaderType_CONFIG_UPDATE:
 	case common.HeaderType_CONFIG:
+	case protoutil.HeaderType_NIL_BLOCK:
 	default:
 		return errors.Errorf("invalid header type %s", common.HeaderType(cHdr.Type))
 	}
@@ -312,6 +313,12 @@ func ValidateTransaction(e *common.Envelope, cryptoProvider bccsp.BCCSP) (*commo
 		if err != nil {
 			putilsLogger.Errorf("validateConfigTransaction returns err %s", err)
 			return payload, pb.TxValidationCode_INVALID_CONFIG_TRANSACTION
+		}
+		return payload, pb.TxValidationCode_VALID
+	case protoutil.HeaderType_NIL_BLOCK:
+		if payload.Header == nil {
+			putilsLogger.Error("validateNilBlock returns err: nil arguments")
+			return payload, pb.TxValidationCode_BAD_CHANNEL_HEADER
 		}
 		return payload, pb.TxValidationCode_VALID
 	default:
