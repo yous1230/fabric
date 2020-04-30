@@ -409,3 +409,19 @@ func (opts *GMSM2PublicKeyImportOpts) Algorithm() string {
 func (opts *GMSM2PublicKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }
+
+// ECDSAGoPublicKeyImportOpts contains options for ECDSA key importation from ecdsa.PublicKey
+type GMSM2GoPublicKeyImportOpts struct {
+	Temporary bool
+}
+
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *GMSM2GoPublicKeyImportOpts) Algorithm() string {
+	return GMSM2
+}
+
+// Ephemeral returns true if the key to generate has to be ephemeral,
+// false otherwise.
+func (opts *GMSM2GoPublicKeyImportOpts) Ephemeral() bool {
+	return opts.Temporary
+}
