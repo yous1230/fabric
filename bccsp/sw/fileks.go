@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/zhigui-projects/gm-plugins/primitive"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/utils"
-	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 // NewFileBasedKeyStore instantiated a file-based key store at a given position.
@@ -140,8 +140,8 @@ func (ks *fileBasedKeyStore) GetKey(ski []byte) (bccsp.Key, error) {
 			return &ecdsaPrivateKey{key.(*ecdsa.PrivateKey)}, nil
 		case *rsa.PrivateKey:
 			return &rsaPrivateKey{key.(*rsa.PrivateKey)}, nil
-		case *sm2.PrivateKey:
-			return &gmsm2PrivateKey{key.(*sm2.PrivateKey)}, nil
+		case *primitive.Sm2PrivateKey:
+			return &gmsm2PrivateKey{key.(*primitive.Sm2PrivateKey)}, nil
 		default:
 			return nil, errors.New("Secret key type not recognized")
 		}
@@ -157,8 +157,8 @@ func (ks *fileBasedKeyStore) GetKey(ski []byte) (bccsp.Key, error) {
 			return &ecdsaPublicKey{key.(*ecdsa.PublicKey)}, nil
 		case *rsa.PublicKey:
 			return &rsaPublicKey{key.(*rsa.PublicKey)}, nil
-		case *sm2.PublicKey:
-			return &gmsm2PublicKey{key.(*sm2.PublicKey)}, nil
+		case *primitive.Sm2PublicKey:
+			return &gmsm2PublicKey{key.(*primitive.Sm2PublicKey)}, nil
 		default:
 			return nil, errors.New("Public key type not recognized")
 		}
@@ -241,6 +241,7 @@ func (ks *fileBasedKeyStore) StoreKey(k bccsp.Key) (err error) {
 		if err != nil {
 			return fmt.Errorf("Failed storing SM4 key [%s]", err)
 		}
+
 	default:
 		return fmt.Errorf("Key type not reconigned [%s]", k)
 	}
@@ -275,8 +276,8 @@ func (ks *fileBasedKeyStore) searchKeystoreForSKI(ski []byte) (k bccsp.Key, err 
 			k = &ecdsaPrivateKey{key.(*ecdsa.PrivateKey)}
 		case *rsa.PrivateKey:
 			k = &rsaPrivateKey{key.(*rsa.PrivateKey)}
-		case *sm2.PrivateKey:
-			k = &gmsm2PrivateKey{key.(*sm2.PrivateKey)}
+		case *primitive.Sm2PrivateKey:
+			k = &gmsm2PrivateKey{key.(*primitive.Sm2PrivateKey)}
 		default:
 			continue
 		}

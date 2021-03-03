@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/tools/cryptogen/ca"
 	"github.com/hyperledger/fabric/common/tools/cryptogen/csp"
 	fabricmsp "github.com/hyperledger/fabric/msp"
@@ -41,7 +40,7 @@ var nodeOUMap = map[int]string{
 	ORDERER: ORDEREROU,
 }
 
-func GenerateLocalMSP(baseDir, name string, sans []string, signCA *ca.CA,
+func GenerateLocalMSP(baseDir, name, cryptoConf string, sans []string, signCA *ca.CA,
 	tlsCA *ca.CA, nodeType int, nodeOUs bool) error {
 
 	// create folder structure
@@ -65,7 +64,7 @@ func GenerateLocalMSP(baseDir, name string, sans []string, signCA *ca.CA,
 	keystore := filepath.Join(mspDir, "keystore")
 
 	// generate private key
-	priv, _, err := csp.GeneratePrivateKey(keystore)
+	priv, _, err := csp.GeneratePrivateKey(keystore, cryptoConf)
 	if err != nil {
 		return err
 	}
@@ -124,7 +123,7 @@ func GenerateLocalMSP(baseDir, name string, sans []string, signCA *ca.CA,
 	*/
 
 	// generate private key
-	tlsPrivKey, _, err := csp.GeneratePrivateKey(tlsDir)
+	tlsPrivKey, _, err := csp.GeneratePrivateKey(tlsDir, cryptoConf)
 	if err != nil {
 		return err
 	}
@@ -164,7 +163,7 @@ func GenerateLocalMSP(baseDir, name string, sans []string, signCA *ca.CA,
 	return nil
 }
 
-func GenerateVerifyingMSP(baseDir string, signCA *ca.CA, tlsCA *ca.CA, nodeOUs bool) error {
+func GenerateVerifyingMSP(baseDir, cryptoConf string, signCA *ca.CA, tlsCA *ca.CA, nodeOUs bool) error {
 
 	// create folder structure and write artifacts to proper locations
 	err := createFolderStructure(baseDir, false)
@@ -195,9 +194,11 @@ func GenerateVerifyingMSP(baseDir string, signCA *ca.CA, tlsCA *ca.CA, nodeOUs b
 		return nil
 	}
 
-	factory.InitFactories(nil)
-	bcsp := factory.GetDefault()
-	priv, err := bcsp.KeyGen(&bccsp.ECDSAP256KeyGenOpts{Temporary: true})
+	bcsp, err := csp.GetBCCSP("", cryptoConf)
+	if err != nil {
+		return err
+	}
+	priv, err := bcsp.KeyGen(&bccsp.DefaultKeyGenOpts{Temporary: true})
 	ecPubKey, err := csp.GetECPublicKey(priv)
 	if err != nil {
 		return err

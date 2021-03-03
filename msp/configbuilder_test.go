@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hyperledger/fabric/bccsp"
-
 	"github.com/hyperledger/fabric/core/config/configtest"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,12 +19,12 @@ import (
 func TestGetLocalMspConfig(t *testing.T) {
 	mspDir, err := configtest.GetDevMspDir()
 	assert.NoError(t, err)
-	_, err = GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	_, err = GetLocalMspConfig(mspDir, nil, "SampleOrg")
 	assert.NoError(t, err)
 }
 
 func TestGetLocalMspConfigFails(t *testing.T) {
-	_, err := GetLocalMspConfig("/tmp/", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	_, err := GetLocalMspConfig("/tmp/", nil, "SampleOrg")
 	assert.Error(t, err)
 }
 

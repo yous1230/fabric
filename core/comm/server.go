@@ -17,7 +17,11 @@ import (
 	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/factory"
+	gcs "github.com/zhigui-projects/gm-crypto/tls"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type GRPCServer struct {
@@ -77,7 +81,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 		//both key and cert are required
 		if secureConfig.Key != nil && secureConfig.Certificate != nil {
 			//load server public and private keys
-			cert, err := tls.X509KeyPair(secureConfig.Certificate, secureConfig.Key)
+			cert, err := gcs.X509KeyPair(secureConfig.Certificate, secureConfig.Key)
 			if err != nil {
 				return nil, err
 			}
@@ -93,7 +97,6 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			}
 			//base server certificate
 			grpcServer.tlsConfig = &tls.Config{
-				VerifyPeerCertificate:  secureConfig.VerifyCertificate,
 				GetCertificate:         getCert,
 				SessionTicketsDisabled: true,
 				CipherSuites:           secureConfig.CipherSuites,
@@ -124,7 +127,12 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			}
 
 			// create credentials and add to server options
-			creds := NewServerTransportCredentials(grpcServer.tlsConfig, serverConfig.Logger)
+			var creds credentials.TransportCredentials
+			if factory.GetDefaultAlgorithm() == bccsp.GMSM2 {
+				creds = NewTLS(grpcServer.tlsConfig, serverConfig.Logger)
+			} else {
+				creds = NewServerTransportCredentials(grpcServer.tlsConfig, serverConfig.Logger)
+			}
 			serverOpts = append(serverOpts, grpc.Creds(creds))
 		} else {
 			return nil, errors.New("serverConfig.SecOpts must contain both Key and Certificate when UseTLS is true")

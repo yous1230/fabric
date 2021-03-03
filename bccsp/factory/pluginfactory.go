@@ -65,10 +65,15 @@ func (f *PluginFactory) Get(config *FactoryOpts) (bccsp.BCCSP, error) {
 	}
 
 	// check to make sure symbol New meets the required function signature
-	new, ok := sym.(func(config map[string]interface{}) (bccsp.BCCSP, error))
+	newfunc, ok := sym.(func(config map[string]interface{}) (bccsp.BCCSP, error))
 	if !ok {
 		return nil, fmt.Errorf("Plugin does not implement the required function signature for 'New'")
 	}
 
-	return new(config.PluginOpts.Config)
+	defaultAlgorithm, ok = config.PluginOpts.Config["Algorithm"].(string)
+	if !ok {
+		return nil, fmt.Errorf("Plugin config type invalid for 'Algorithm', required 'string' type")
+	}
+
+	return newfunc(config.PluginOpts.Config)
 }

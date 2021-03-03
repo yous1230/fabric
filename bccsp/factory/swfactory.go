@@ -59,14 +59,14 @@ func (f *SWFactory) Get(config *FactoryOpts) (bccsp.BCCSP, error) {
 		ks = sw.NewDummyKeyStore()
 	}
 
-	return sw.NewWithParams(swOpts.SecLevel, swOpts.HashFamily, ks)
+	defaultAlgorithm = swOpts.Algorithm
+	return sw.NewWithParams(swOpts.Algorithm, swOpts.SecLevel, swOpts.HashFamily, ks)
 }
 
 // SwOpts contains options for the SWFactory
 type SwOpts struct {
 	// Default algorithms when not specified (Deprecated?)
-	Algorithm string `mapstructure:"algorithm" json:"algorithm" yaml:"Algorithm"`
-
+	Algorithm  string `mapstructure:"algorithm" json:"algorithm" yaml:"Algorithm"`
 	SecLevel   int    `mapstructure:"security" json:"security" yaml:"Security"`
 	HashFamily string `mapstructure:"hash" json:"hash" yaml:"Hash"`
 

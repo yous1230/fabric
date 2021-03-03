@@ -20,6 +20,8 @@ import (
 
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/core/config"
+	gm_tls "github.com/zhigui-projects/gm-crypto/tls"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -136,11 +138,10 @@ func (cs *CredentialSupport) GetDeliverServiceCredentials(
 
 	// Parse all PEM bundles and add them into the CA cert pool.
 	certPool := x509.NewCertPool()
-
 	for _, cert := range rootCACerts {
 		block, _ := pem.Decode(cert)
 		if block != nil {
-			cert, err := x509.ParseCertificate(block.Bytes)
+			cert, err := gcx.GetX509().ParseCertificate(block.Bytes)
 			if err == nil {
 				certPool.AddCert(cert)
 			} else {
@@ -152,7 +153,7 @@ func (cs *CredentialSupport) GetDeliverServiceCredentials(
 	}
 
 	for _, override := range endpointOverrides {
-		certPool.AppendCertsFromPEM(override.PEMs)
+		_ = AddPemToCertPool(override.PEMs, certPool)
 	}
 
 	// Finally, create a TLS client config with the computed TLS root CAs.
@@ -161,7 +162,8 @@ func (cs *CredentialSupport) GetDeliverServiceCredentials(
 		Certificates: []tls.Certificate{cs.clientCert},
 		RootCAs:      certPool,
 	}
-	creds = credentials.NewTLS(tlsConfig)
+
+	creds = NewTLS(tlsConfig, commLogger)
 	return creds, nil
 }
 
@@ -190,7 +192,7 @@ func (cs *CredentialSupport) GetPeerCredentials() credentials.TransportCredentia
 	}
 
 	tlsConfig.RootCAs = certPool
-	return credentials.NewTLS(tlsConfig)
+	return NewTLS(tlsConfig, commLogger)
 }
 
 func getEnv(key, def string) string {
@@ -245,7 +247,7 @@ func InitTLSForShim(key, certStr string) credentials.TransportCredentials {
 	if err != nil {
 		commLogger.Panicf("failed decoding public key from base64, string: %s, error: %v", certStr, err)
 	}
-	cert, err := tls.X509KeyPair(pub, priv)
+	cert, err := gm_tls.X509KeyPair(pub, priv)
 	if err != nil {
 		commLogger.Panicf("failed loading certificate: %v", err)
 	}
@@ -254,12 +256,12 @@ func InitTLSForShim(key, certStr string) credentials.TransportCredentials {
 		commLogger.Panicf("failed loading root ca cert: %v", err)
 	}
 	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(b) {
-		commLogger.Panicf("failed to append certificates")
+	if err := AddPemToCertPool(b, cp); err != nil {
+		commLogger.Panicf("failed to append certificates: %v", err)
 	}
-	return credentials.NewTLS(&tls.Config{
+	return NewTLS(&tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      cp,
 		ServerName:   sn,
-	})
+	}, commLogger)
 }

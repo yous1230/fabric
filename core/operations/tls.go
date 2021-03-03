@@ -36,7 +36,7 @@ func (t TLS) Config() (*tls.Config, error) {
 			if err != nil {
 				return nil, err
 			}
-			caCertPool.AppendCertsFromPEM(caPem)
+			_ = comm.AddPemToCertPool(caPem, caCertPool)
 		}
 		tlsConfig = &tls.Config{
 			Certificates: []tls.Certificate{cert},

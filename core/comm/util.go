@@ -15,6 +15,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 )
@@ -48,8 +49,11 @@ func pemToX509Certs(pemCerts []byte) ([]*x509.Certificate, []string, error) {
 			continue
 		}
 		*/
+		if block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			continue
+		}
 
-		cert, err := x509.ParseCertificate(block.Bytes)
+		cert, err := gcx.GetX509().ParseCertificate(block.Bytes)
 		if err != nil {
 			return nil, subjects, err
 		} else {

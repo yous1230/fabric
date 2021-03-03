@@ -627,7 +627,7 @@ func initializeGrpcServer(conf *localconfig.TopLevel, serverConfig comm.ServerCo
 
 func initializeLocalMsp(conf *localconfig.TopLevel) {
 	// Load local MSP
-	err := mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID, conf.General.Hash.HashFamily, conf.General.Hash.HashFunction)
+	err := mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID)
 	if err != nil { // Handle errors reading the config file
 		logger.Fatal("Failed to initialize local MSP:", err)
 	}

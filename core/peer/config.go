@@ -31,6 +31,7 @@ import (
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+	gm_tls "github.com/zhigui-projects/gm-crypto/tls"
 )
 
 // Is the configuration cached?
@@ -249,7 +250,7 @@ func GetClientCertificate() (tls.Certificate, error) {
 		return cert, errors.WithMessage(err,
 			"error loading client TLS certificate")
 	}
-	cert, err = tls.X509KeyPair(clientCert, clientKey)
+	cert, err = gm_tls.X509KeyPair(clientCert, clientKey)
 	if err != nil {
 		return cert, errors.WithMessage(err,
 			"error parsing client TLS key pair")

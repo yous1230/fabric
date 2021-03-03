@@ -67,7 +67,7 @@ func TestMSPSetupNoCryptoConf(t *testing.T) {
 		os.Exit(-1)
 	}
 
-	conf, err := GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(mspDir, nil, "SampleOrg")
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -124,7 +124,7 @@ func TestGetters(t *testing.T) {
 }
 
 func TestMSPSetupBad(t *testing.T) {
-	_, err := GetLocalMspConfig("barf", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	_, err := GetLocalMspConfig("barf", nil, "SampleOrg")
 	if err == nil {
 		t.Fatalf("Setup should have failed on an invalid config file")
 		return
@@ -154,7 +154,7 @@ func (*bccspNoKeyLookupKS) GetKey(ski []byte) (k bccsp.Key, err error) {
 func TestNotFoundInBCCSP(t *testing.T) {
 	dir, err := configtest.GetDevMspDir()
 	assert.NoError(t, err)
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
 
 	assert.NoError(t, err)
 
@@ -162,7 +162,7 @@ func TestNotFoundInBCCSP(t *testing.T) {
 	assert.NoError(t, err)
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join(dir, "keystore"), true)
 	assert.NoError(t, err)
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = &bccspNoKeyLookupKS{csp}
 
@@ -203,7 +203,7 @@ func TestGetSigningIdentityFromVerifyingMSP(t *testing.T) {
 		os.Exit(-1)
 	}
 
-	conf, err = GetVerifyingMspConfig(mspDir, "SampleOrg", ProviderTypeToString(FABRIC), bccsp.SHA2, bccsp.SHA256)
+	conf, err = GetVerifyingMspConfig(mspDir, "SampleOrg", ProviderTypeToString(FABRIC), nil)
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -325,14 +325,14 @@ func TestValidateCAIdentity(t *testing.T) {
 }
 
 func TestBadAdminIdentity(t *testing.T) {
-	conf, err := GetLocalMspConfig("testdata/badadmin", nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig("testdata/badadmin", nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
 	assert.NoError(t, err)
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join("testdata/badadmin", "keystore"), true)
 	assert.NoError(t, err)
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = csp
 
@@ -474,13 +474,13 @@ func TestSignAndVerifyFailures(t *testing.T) {
 		return
 	}
 
-	hash := id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction
-	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = "barf"
+	hash := id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily
+	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = "barf"
 
 	sig, err := id.Sign(msg)
 	assert.Error(t, err)
 
-	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = hash
+	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = hash
 
 	sig, err = id.Sign(msg)
 	if err != nil {
@@ -488,12 +488,12 @@ func TestSignAndVerifyFailures(t *testing.T) {
 		return
 	}
 
-	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = "barf"
+	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = "barf"
 
 	err = id.Verify(msg, sig)
 	assert.Error(t, err)
 
-	id.(*signingidentity).msp.cryptoConfig.IdentityIdentifierHashFunction = hash
+	id.(*signingidentity).msp.cryptoConfig.SignatureHashFamily = hash
 }
 
 func TestSignAndVerifyOtherHash(t *testing.T) {
@@ -948,7 +948,7 @@ func TestIdentityExpiresAt(t *testing.T) {
 
 func TestIdentityExpired(t *testing.T) {
 	expiredCertsDir := "testdata/expired"
-	conf, err := GetLocalMspConfig(expiredCertsDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(expiredCertsDir, nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
@@ -957,7 +957,7 @@ func TestIdentityExpired(t *testing.T) {
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join(expiredCertsDir, "keystore"), true)
 	assert.NoError(t, err)
 
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = csp
 
@@ -1072,7 +1072,7 @@ func TestMain(m *testing.M) {
 		os.Exit(-1)
 	}
 
-	conf, err = GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err = GetLocalMspConfig(mspDir, nil, "SampleOrg")
 	if err != nil {
 		fmt.Printf("Setup should have succeeded, got err %s instead", err)
 		os.Exit(-1)
@@ -1168,14 +1168,14 @@ func getIdentity(t *testing.T, path string) Identity {
 }
 
 func getLocalMSPWithVersionAndError(t *testing.T, dir string, version MSPVersion) (MSP, error) {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(version)
 	assert.NoError(t, err)
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join(dir, "keystore"), true)
 	assert.NoError(t, err)
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = csp
 
@@ -1183,14 +1183,14 @@ func getLocalMSPWithVersionAndError(t *testing.T, dir string, version MSPVersion
 }
 
 func getLocalMSP(t *testing.T, dir string) MSP {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(MSPv1_0)
 	assert.NoError(t, err)
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join(dir, "keystore"), true)
 	assert.NoError(t, err)
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = csp
 
@@ -1205,14 +1205,14 @@ func getLocalMSPWithVersion(t *testing.T, dir string, version MSPVersion) MSP {
 }
 
 func getLocalMSPWithVersionErr(t *testing.T, dir string, version MSPVersion, expectedErr string) MSP {
-	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := GetLocalMspConfig(dir, nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	thisMSP, err := newBccspMsp(version)
 	assert.NoError(t, err)
 	ks, err := sw.NewFileBasedKeyStore(nil, filepath.Join(dir, "keystore"), true)
 	assert.NoError(t, err)
-	csp, err := sw.NewWithParams(256, "SHA2", ks)
+	csp, err := sw.NewWithParams("ECDSA", 256, "SHA2", ks)
 	assert.NoError(t, err)
 	thisMSP.(*bccspmsp).bccsp = csp
 

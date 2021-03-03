@@ -972,7 +972,7 @@ var _ = Describe("Prover", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(commandResp.GetTokenTransaction()).To(Equal(expectedTokenTx))
 				Expect(commandResp.Header.Creator).To(Equal([]byte("response_creator")))
-				Expect(commandResp.Header.CommandHash).To(Equal(util.ComputeHash(ProtoMarshal(command))))
+				Expect(commandResp.Header.CommandHash).To(Equal(util.ComputeSHA256(ProtoMarshal(command))))
 				Expect(resp.Signature).To(Equal([]byte("response_signature")))
 			})
 		})

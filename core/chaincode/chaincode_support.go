@@ -8,11 +8,14 @@ package chaincode
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/metrics"
 	"github.com/hyperledger/fabric/common/util"
+	"github.com/hyperledger/fabric/common/viperutil"
 	"github.com/hyperledger/fabric/core/chaincode/platforms"
 	"github.com/hyperledger/fabric/core/common/ccprovider"
 	"github.com/hyperledger/fabric/core/common/sysccprovider"
@@ -94,17 +97,45 @@ func NewChaincodeSupport(
 		certGenerator = nil
 	}
 
+	var bccspConfig *factory.FactoryOpts
+	if err := viperutil.EnhancedExactUnmarshalKey("peer.BCCSP", &bccspConfig); err != nil {
+		panic(fmt.Sprintf("could not parse YAML config: %v", err))
+	}
+
+	var bccspEnv []string
+	switch bccspConfig.ProviderName {
+	case "SW":
+		bccspEnv = []string{
+			"CORE_PEER_BCCSP_DEFAULT=SW",
+			"CORE_PEER_BCCSP_SW_ALGORITHM=" + bccspConfig.SwOpts.Algorithm,
+			"CORE_PEER_BCCSP_SW_HASH=" + bccspConfig.SwOpts.HashFamily,
+			"CORE_PEER_BCCSP_SW_SECURITY=" + strconv.Itoa(bccspConfig.SwOpts.SecLevel),
+		}
+	case "PLUGIN":
+		bccspEnv = []string{
+			"CORE_PEER_BCCSP_DEFAULT=PLUGIN",
+			"CORE_PEER_BCCSP_PLUGIN_LIBRARY=" + bccspConfig.PluginOpts.Library,
+			"CORE_PEER_BCCSP_PLUGIN_CONFIG_ALGORITHM=" + bccspConfig.PluginOpts.Config["Algorithm"].(string),
+			"CORE_PEER_BCCSP_PLUGIN_CONFIG_HASH=" + bccspConfig.PluginOpts.Config["Hash"].(string),
+			"CORE_PEER_BCCSP_PLUGIN_CONFIG_SECURITY=" + bccspConfig.PluginOpts.Config["Security"].(string),
+		}
+	default:
+		panic(fmt.Sprintf("no '%s' provider", bccspConfig.ProviderName))
+	}
+	commonEnv := []string{
+		"CORE_CHAINCODE_LOGGING_LEVEL=" + config.LogLevel,
+		"CORE_CHAINCODE_LOGGING_SHIM=" + config.ShimLogLevel,
+		"CORE_CHAINCODE_LOGGING_FORMAT=" + config.LogFormat,
+	}
+	commonEnv = append(commonEnv, bccspEnv...)
+
 	cs.Runtime = &ContainerRuntime{
 		CertGenerator:    certGenerator,
 		Processor:        processor,
 		CACert:           caCert,
 		PeerAddress:      peerAddress,
 		PlatformRegistry: platformRegistry,
-		CommonEnv: []string{
-			"CORE_CHAINCODE_LOGGING_LEVEL=" + config.LogLevel,
-			"CORE_CHAINCODE_LOGGING_SHIM=" + config.ShimLogLevel,
-			"CORE_CHAINCODE_LOGGING_FORMAT=" + config.LogFormat,
-		},
+		CommonEnv:        commonEnv,
 	}
 
 	cs.Launcher = &RuntimeLauncher{

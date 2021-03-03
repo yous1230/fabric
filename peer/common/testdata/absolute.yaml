@@ -6,7 +6,6 @@ peer:
     BCCSP:
         Default: SW
         SW:
-            Algorithm: ECDSA
             Hash: SHA2
             Security: 256
             FileKeyStore:

@@ -17,21 +17,20 @@ package sw
 
 import (
 	"crypto/elliptic"
-	"fmt"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/zhigui-projects/gmsm/sm2"
-	"github.com/zhigui-projects/gmsm/sm3"
+	"github.com/pkg/errors"
+	"github.com/zhigui-projects/gm-plugins/primitive"
 )
 
 type gmsm2PrivateKey struct {
-	privKey *sm2.PrivateKey
+	privKey *primitive.Sm2PrivateKey
 }
 
 // Bytes converts this key to its byte representation,
 // if this operation is allowed.
 func (k *gmsm2PrivateKey) Bytes() (raw []byte, err error) {
-	return sm2.MarshalSm2PrivateKey(k.privKey, nil)
+	return SmCrypto.MarshalSm2PrivateKey(k.privKey, nil)
 }
 
 // SKI returns the subject key identifier of this key.
@@ -41,10 +40,10 @@ func (k *gmsm2PrivateKey) SKI() (ski []byte) {
 	}
 
 	//Marshall the public key
-	raw := elliptic.Marshal(k.privKey.Curve, k.privKey.PublicKey.X, k.privKey.PublicKey.Y)
+	raw := elliptic.Marshal(k.privKey.Curve, k.privKey.Sm2PublicKey.X, k.privKey.Sm2PublicKey.Y)
 
 	// Hash it
-	hash := sm3.New()
+	hash := SmCrypto.NewSm3()
 	hash.Write(raw)
 	return hash.Sum(nil)
 }
@@ -64,19 +63,23 @@ func (k *gmsm2PrivateKey) Private() bool {
 // PublicKey returns the corresponding public key part of an asymmetric public/private key pair.
 // This method returns an error in symmetric key schemes.
 func (k *gmsm2PrivateKey) PublicKey() (bccsp.Key, error) {
-	return &gmsm2PublicKey{&k.privKey.PublicKey}, nil
+	return &gmsm2PublicKey{&k.privKey.Sm2PublicKey}, nil
+}
+
+func (k *gmsm2PrivateKey) PrivateKey() (interface{}, error) {
+	return k.privKey, nil
 }
 
 type gmsm2PublicKey struct {
-	pubKey *sm2.PublicKey
+	pubKey *primitive.Sm2PublicKey
 }
 
 // Bytes converts this key to its byte representation,
 // if this operation is allowed.
 func (k *gmsm2PublicKey) Bytes() (raw []byte, err error) {
-	raw, err = sm2.MarshalSm2PublicKey(k.pubKey)
+	raw, err = SmCrypto.MarshalSm2PublicKey(k.pubKey)
 	if err != nil {
-		return nil, fmt.Errorf("Failed marshalling key [%s]", err)
+		return nil, errors.Errorf("Failed marshalling key [%s]", err)
 	}
 	return
 }
@@ -91,7 +94,7 @@ func (k *gmsm2PublicKey) SKI() (ski []byte) {
 	raw := elliptic.Marshal(k.pubKey.Curve, k.pubKey.X, k.pubKey.Y)
 
 	// Hash it
-	hash := sm3.New()
+	hash := SmCrypto.NewSm3()
 	hash.Write(raw)
 	return hash.Sum(nil)
 }
@@ -112,4 +115,8 @@ func (k *gmsm2PublicKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *gmsm2PublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *gmsm2PublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [gmsm2PublicKey]")
 }

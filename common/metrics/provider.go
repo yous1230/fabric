@@ -41,10 +41,6 @@ type CounterOpts struct {
 	// Help provides information about this metric.
 	Help string
 
-	// LabelHelp provides help information for labels. When set, this information
-	// will be used to populate the documentation.
-	LabelHelp map[string]string
-
 	// LabelNames provides the names of the labels that can be attached to this
 	// metric. When a metric is recorded, label values must be provided for each
 	// of these label names.
@@ -144,10 +140,6 @@ type HistogramOpts struct {
 	// metric. When a metric is recorded, label values must be provided for each
 	// of these label names.
 	LabelNames []string
-
-	// LabelHelp provides help information for labels. When set, this information
-	// will be used to populate the documentation.
-	LabelHelp map[string]string
 
 	// StatsdFormat determines how the fully-qualified statsd bucket name is
 	// constructed from Namespace, Subsystem, Name, and Labels. This is done by

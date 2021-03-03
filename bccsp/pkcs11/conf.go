@@ -74,6 +74,7 @@ func (conf *config) setSecurityLevelSHA3(level int) (err error) {
 // PKCS11Opts contains options for the P11Factory
 type PKCS11Opts struct {
 	// Default algorithms when not specified (Deprecated?)
+	Algorithm  string `mapstructure:"algorithm" json:"algorithm"`
 	SecLevel   int    `mapstructure:"security" json:"security"`
 	HashFamily string `mapstructure:"hash" json:"hash"`
 

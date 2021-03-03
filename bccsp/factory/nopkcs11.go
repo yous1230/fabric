@@ -18,8 +18,11 @@ limitations under the License.
 package factory
 
 import (
+	"strconv"
+
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // FactoryOpts holds configuration information used to initialize factory implementations
@@ -74,6 +77,7 @@ func InitFactories(config *FactoryOpts) error {
 		if !ok {
 			factoriesInitError = errors.Errorf("%s\nCould not find default `%s` BCCSP", factoriesInitError, config.ProviderName)
 		}
+		gcx.InitX509(defaultAlgorithm)
 	})
 
 	return factoriesInitError
@@ -96,4 +100,36 @@ func GetBCCSPFromOpts(config *FactoryOpts) (bccsp.BCCSP, error) {
 		return nil, errors.Wrapf(err, "Could not initialize BCCSP %s", f.Name())
 	}
 	return csp, nil
+}
+
+func GetHashOptFromOpts(config *FactoryOpts) (string, bccsp.HashOpts, error) {
+	switch config.ProviderName {
+	case "SW":
+		if opt, err := bccsp.GetHashOptFromFamily(config.SwOpts.SecLevel, config.SwOpts.HashFamily); err != nil {
+			return "", nil, err
+		} else {
+			return config.SwOpts.HashFamily, opt, nil
+		}
+	case "PLUGIN":
+		secLv := config.PluginOpts.Config["SecLevel"]
+		if secLv == nil {
+			return "", nil, errors.Errorf("bccsp plugin provider [%s] hash seclevel not set", config.ProviderName)
+		}
+		secLevel, err := strconv.Atoi(secLv.(string))
+		if err != nil {
+			return "", nil, err
+		}
+		hf := config.PluginOpts.Config["HashFamily"]
+		if hf == nil {
+			return "", nil, errors.Errorf("bccsp plugin provider [%s] hash family not set", config.ProviderName)
+		}
+
+		if opt, err := bccsp.GetHashOptFromFamily(secLevel, hf.(string)); err != nil {
+			return "", nil, err
+		} else {
+			return hf.(string), opt, nil
+		}
+	default:
+		return "", nil, errors.Errorf("Could not find HashOpt from opts, no '%s' provider", config.ProviderName)
+	}
 }

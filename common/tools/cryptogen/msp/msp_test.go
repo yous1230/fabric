@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/hyperledger/fabric/bccsp"
-
 	"github.com/hyperledger/fabric/common/tools/cryptogen/ca"
 	"github.com/hyperledger/fabric/common/tools/cryptogen/msp"
 	fabricmsp "github.com/hyperledger/fabric/msp"
@@ -30,8 +28,7 @@ const (
 	testOrganizationalUnit = "Hyperledger Fabric"
 	testStreetAddress      = "testStreetAddress"
 	testPostalCode         = "123456"
-	testHashFamily         = bccsp.SHA2
-	testHashFunction       = bccsp.SHA256
+	testCryptoConf         = "SW/ECDSA/SHA2-256"
 )
 
 var testDir = filepath.Join(os.TempDir(), "msp-test")
@@ -39,7 +36,7 @@ var testDir = filepath.Join(os.TempDir(), "msp-test")
 func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	cleanup(testDir)
 
-	err := msp.GenerateLocalMSP(testDir, testName, nil, &ca.CA{}, &ca.CA{}, msp.PEER, nodeOUs)
+	err := msp.GenerateLocalMSP(testDir, testName, testCryptoConf, nil, &ca.CA{}, &ca.CA{}, msp.PEER, nodeOUs)
 	assert.Error(t, err, "Empty CA should have failed")
 
 	caDir := filepath.Join(testDir, "ca")
@@ -48,10 +45,10 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	tlsDir := filepath.Join(testDir, "tls")
 
 	// generate signing CA
-	signCA, err := ca.NewCA(caDir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode)
+	signCA, err := ca.NewCA(caDir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode, testCryptoConf)
 	assert.NoError(t, err, "Error generating CA")
 	// generate TLS CA
-	tlsCA, err := ca.NewCA(tlsCADir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode)
+	tlsCA, err := ca.NewCA(tlsCADir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode, testCryptoConf)
 	assert.NoError(t, err, "Error generating CA")
 
 	assert.NotEmpty(t, signCA.SignCert.Subject.Country, "country cannot be empty.")
@@ -68,7 +65,7 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	assert.Equal(t, testPostalCode, signCA.SignCert.Subject.PostalCode[0], "Failed to match postalCode")
 
 	// generate local MSP for nodeType=PEER
-	err = msp.GenerateLocalMSP(testDir, testName, nil, signCA, tlsCA, msp.PEER, nodeOUs)
+	err = msp.GenerateLocalMSP(testDir, testName, testCryptoConf, nil, signCA, tlsCA, msp.PEER, nodeOUs)
 	assert.NoError(t, err, "Failed to generate local MSP")
 
 	// check to see that the right files were generated/saved
@@ -100,7 +97,7 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	}
 
 	// generate local MSP for nodeType=CLIENT
-	err = msp.GenerateLocalMSP(testDir, testName, nil, signCA, tlsCA, msp.CLIENT, nodeOUs)
+	err = msp.GenerateLocalMSP(testDir, testName, testCryptoConf, nil, signCA, tlsCA, msp.CLIENT, nodeOUs)
 	assert.NoError(t, err, "Failed to generate local MSP")
 	// check all
 	for _, file := range mspFiles {
@@ -114,7 +111,7 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	}
 
 	// finally check to see if we can load this as a local MSP config
-	testMSPConfig, err := fabricmsp.GetLocalMspConfig(mspDir, nil, testName, bccsp.SHA2, bccsp.SHA256)
+	testMSPConfig, err := fabricmsp.GetLocalMspConfig(mspDir, nil, testName)
 	assert.NoError(t, err, "Error parsing local MSP config")
 	testMSP, err := fabricmsp.New(&fabricmsp.BCCSPNewOpts{NewBaseOpts: fabricmsp.NewBaseOpts{Version: fabricmsp.MSPv1_0}})
 	assert.NoError(t, err, "Error creating new BCCSP MSP")
@@ -122,10 +119,10 @@ func testGenerateLocalMSP(t *testing.T, nodeOUs bool) {
 	assert.NoError(t, err, "Error setting up local MSP")
 
 	tlsCA.Name = "test/fail"
-	err = msp.GenerateLocalMSP(testDir, testName, nil, signCA, tlsCA, msp.CLIENT, nodeOUs)
+	err = msp.GenerateLocalMSP(testDir, testName, testCryptoConf, nil, signCA, tlsCA, msp.CLIENT, nodeOUs)
 	assert.Error(t, err, "Should have failed with CA name 'test/fail'")
 	signCA.Name = "test/fail"
-	err = msp.GenerateLocalMSP(testDir, testName, nil, signCA, tlsCA, msp.ORDERER, nodeOUs)
+	err = msp.GenerateLocalMSP(testDir, testName, testCryptoConf, nil, signCA, tlsCA, msp.ORDERER, nodeOUs)
 	assert.Error(t, err, "Should have failed with CA name 'test/fail'")
 	t.Log(err)
 	cleanup(testDir)
@@ -144,13 +141,13 @@ func testGenerateVerifyingMSP(t *testing.T, nodeOUs bool) {
 	tlsCADir := filepath.Join(testDir, "tlsca")
 	mspDir := filepath.Join(testDir, "msp")
 	// generate signing CA
-	signCA, err := ca.NewCA(caDir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode)
+	signCA, err := ca.NewCA(caDir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode, testCryptoConf)
 	assert.NoError(t, err, "Error generating CA")
 	// generate TLS CA
-	tlsCA, err := ca.NewCA(tlsCADir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode)
+	tlsCA, err := ca.NewCA(tlsCADir, testCAOrg, testCAName, testCountry, testProvince, testLocality, testOrganizationalUnit, testStreetAddress, testPostalCode, testCryptoConf)
 	assert.NoError(t, err, "Error generating CA")
 
-	err = msp.GenerateVerifyingMSP(mspDir, signCA, tlsCA, nodeOUs)
+	err = msp.GenerateVerifyingMSP(mspDir, testCryptoConf, signCA, tlsCA, nodeOUs)
 	assert.NoError(t, err, "Failed to generate verifying MSP")
 
 	// check to see that the right files were generated/saved
@@ -170,7 +167,7 @@ func testGenerateVerifyingMSP(t *testing.T, nodeOUs bool) {
 			"Expected to find file "+file)
 	}
 	// finally check to see if we can load this as a verifying MSP config
-	testMSPConfig, err := fabricmsp.GetVerifyingMspConfig(mspDir, testName, fabricmsp.ProviderTypeToString(fabricmsp.FABRIC), testHashFamily, testHashFunction)
+	testMSPConfig, err := fabricmsp.GetVerifyingMspConfig(mspDir, testName, fabricmsp.ProviderTypeToString(fabricmsp.FABRIC), nil)
 	assert.NoError(t, err, "Error parsing verifying MSP config")
 	testMSP, err := fabricmsp.New(&fabricmsp.BCCSPNewOpts{NewBaseOpts: fabricmsp.NewBaseOpts{Version: fabricmsp.MSPv1_0}})
 	assert.NoError(t, err, "Error creating new BCCSP MSP")
@@ -178,10 +175,10 @@ func testGenerateVerifyingMSP(t *testing.T, nodeOUs bool) {
 	assert.NoError(t, err, "Error setting up verifying MSP")
 
 	tlsCA.Name = "test/fail"
-	err = msp.GenerateVerifyingMSP(mspDir, signCA, tlsCA, nodeOUs)
+	err = msp.GenerateVerifyingMSP(mspDir, testCryptoConf, signCA, tlsCA, nodeOUs)
 	assert.Error(t, err, "Should have failed with CA name 'test/fail'")
 	signCA.Name = "test/fail"
-	err = msp.GenerateVerifyingMSP(mspDir, signCA, tlsCA, nodeOUs)
+	err = msp.GenerateVerifyingMSP(mspDir, testCryptoConf, signCA, tlsCA, nodeOUs)
 	assert.Error(t, err, "Should have failed with CA name 'test/fail'")
 	t.Log(err)
 	cleanup(testDir)

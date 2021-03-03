@@ -25,7 +25,6 @@ import (
 	mocks2 "github.com/hyperledger/fabric/bccsp/mocks"
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/stretchr/testify/assert"
-	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 func TestKeyGen(t *testing.T) {
@@ -131,7 +130,7 @@ func TestGMSM2KeyGenerator(t *testing.T) {
 	gmsm2K, ok := k.(*gmsm2PrivateKey)
 	assert.True(t, ok)
 	assert.NotNil(t, gmsm2K.privKey)
-	assert.Equal(t, gmsm2K.privKey.Curve, sm2.P256Sm2())
+	assert.Equal(t, gmsm2K.privKey.Curve, SmCrypto.Sm2P256Curve())
 }
 
 func TestGMSM4KeyGenerator(t *testing.T) {

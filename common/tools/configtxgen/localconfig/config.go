@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger/fabric/bccsp"
-
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/policies"
 	"github.com/hyperledger/fabric/common/viperutil"
@@ -147,7 +145,6 @@ type Organization struct {
 	// it was used for modifying the default policy generation, but policies
 	// may now be specified explicitly so it is redundant and unnecessary
 	AdminPrincipal string `yaml:"AdminPrincipal"`
-	Hash           *Hash  `yaml:"Hash"`
 }
 
 // AnchorPeer encodes the necessary fields to identify an anchor peer.
@@ -181,11 +178,6 @@ type BatchSize struct {
 // Kafka contains configuration for the Kafka-based orderer.
 type Kafka struct {
 	Brokers []string `yaml:"Brokers"`
-}
-
-type Hash struct {
-	HashFamily   string `yaml:"HashFamily"`
-	HashFunction string `yaml:"HashFunction"`
 }
 
 var genesisDefaults = TopLevel{
@@ -359,11 +351,6 @@ func (org *Organization) completeInitialization(configDir string) {
 
 	if org.AdminPrincipal == "" {
 		org.AdminPrincipal = AdminRoleAdminPrincipal
-	}
-
-	if org.Hash == nil {
-		org.Hash.HashFamily = bccsp.SHA2
-		org.Hash.HashFunction = bccsp.SHA256
 	}
 	translatePaths(configDir, org)
 }

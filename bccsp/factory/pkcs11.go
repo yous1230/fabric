@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pkcs11"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // FactoryOpts holds configuration information used to initialize factory implementations
@@ -92,6 +93,7 @@ func setFactories(config *FactoryOpts) error {
 	if !ok {
 		factoriesInitError = errors.Errorf("%s\nCould not find default `%s` BCCSP", factoriesInitError, config.ProviderName)
 	}
+	gcx.InitX509(defaultAlgorithm)
 
 	return factoriesInitError
 }

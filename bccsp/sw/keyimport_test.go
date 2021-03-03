@@ -28,7 +28,6 @@ import (
 	"github.com/hyperledger/fabric/bccsp/sw/mocks"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/stretchr/testify/assert"
-	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 func TestKeyImport(t *testing.T) {
@@ -261,9 +260,9 @@ func TestGMSM2PrivateKeyImportOptsKeyImporter(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Failed casting to SM2 private key. Invalid raw material.")
 
-	smK, err := sm2.GenerateKey()
+	smK, err := SmCrypto.GenPrivateKey()
 	assert.NoError(t, err)
-	raw, err = sm2.MarshalSm2PrivateKey(smK, nil)
+	raw, err = SmCrypto.MarshalSm2PrivateKey(smK, nil)
 	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
 	assert.NoError(t, err)
 }
@@ -296,9 +295,9 @@ func TestGMSM2PublicKeyImportOptsKeyImporter(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Failed converting to GMSM2 public key")
 
-	smK, err := sm2.GenerateKey()
+	smK, err := SmCrypto.GenPrivateKey()
 	assert.NoError(t, err)
-	raw, err = sm2.MarshalSm2PublicKey(&smK.PublicKey)
+	raw, err = SmCrypto.MarshalSm2PublicKey(&smK.Sm2PublicKey)
 	_, err = ki.KeyImport(raw, &mocks2.KeyImportOpts{})
 	assert.NoError(t, err)
 }

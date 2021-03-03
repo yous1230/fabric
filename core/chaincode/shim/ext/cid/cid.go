@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/fabric/core/chaincode/shim/ext/attrmgr"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // GetID returns the ID associated with the invoking identity.  This ID
@@ -162,7 +163,7 @@ func (c *clientIdentityImpl) init() error {
 		}
 		return nil
 	}
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := gcx.GetX509().ParseCertificate(block.Bytes)
 	if err != nil {
 		return errors.WithMessage(err, "failed to parse certificate")
 	}

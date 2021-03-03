@@ -24,7 +24,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/zhigui-projects/gmsm/sm2"
 )
 
 type ecdsaKeyGenerator struct {
@@ -83,7 +82,7 @@ type gmsm2KeyGenerator struct {
 }
 
 func (kg *gmsm2KeyGenerator) KeyGen(opts bccsp.KeyGenOpts) (bccsp.Key, error) {
-	lowLevelKey, err := sm2.GenerateKey()
+	lowLevelKey, err := SmCrypto.GenPrivateKey()
 	if err != nil {
 		return nil, fmt.Errorf("Failed generating GMSM2 key [%s]", err)
 	}

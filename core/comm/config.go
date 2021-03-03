@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger/fabric/common/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+	gmtls "github.com/zhigui-projects/gm-crypto/tls"
 )
 
 // Configuration defaults
@@ -32,6 +33,8 @@ var (
 	}
 	// strong TLS cipher suites
 	DefaultTLSCipherSuites = []uint16{
+		gmtls.GMTLS_SM2DHE_SM2SIGN_WITH_SMS4_CBC_SM3,
+		gmtls.GMTLS_SM2DHE_SM2SIGN_WITH_SMS4_GCM_SM3,
 		tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 		tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 		tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,

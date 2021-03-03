@@ -133,14 +133,45 @@ func Start(cc Chaincode) error {
 	// up formatted logging.
 	SetupChaincodeLogging()
 
+	var bccspConfig *factory.FactoryOpts
+	bd := viper.GetString("peer.bccsp.default")
+
+	switch bd {
+	case "SW":
+		bccspConfig = &factory.FactoryOpts{
+			ProviderName: "SW",
+			SwOpts: &factory.SwOpts{
+				Algorithm:  viper.GetString("peer.bccsp.sw.algorithm"),
+				HashFamily: viper.GetString("peer.bccsp.sw.hash"),
+				SecLevel:   viper.GetInt("peer.bccsp.sw.security"),
+				Ephemeral:  true,
+			},
+		}
+	case "PLUGIN":
+		pluginCfg := map[string]interface{}{
+			"Algorithm":  viper.GetString("peer.bccsp.plugin.config.algorithm"),
+			"HashFamily": viper.GetString("peer.bccsp.plugin.config.hash"),
+			"SecLevel":   viper.GetInt("peer.bccsp.plugin.config.security"),
+		}
+		bccspConfig = &factory.FactoryOpts{
+			ProviderName: "SW",
+			PluginOpts: &factory.PluginOpts{
+				Library: viper.GetString("peer.bccsp.plugin.library"),
+				Config:  pluginCfg,
+			},
+		}
+	default:
+		bccspConfig = factory.GetDefaultOpts()
+	}
+
+	err := factory.InitFactories(bccspConfig)
+	if err != nil {
+		return errors.WithMessage(err, "internal error, BCCSP could not be initialized with default options")
+	}
+
 	chaincodename := viper.GetString("chaincode.id.name")
 	if chaincodename == "" {
 		return errors.New("error chaincode id not provided")
-	}
-
-	err := factory.InitFactories(factory.GetDefaultOpts())
-	if err != nil {
-		return errors.WithMessage(err, "internal error, BCCSP could not be initialized with default options")
 	}
 
 	//mock stream not set up ... get real stream

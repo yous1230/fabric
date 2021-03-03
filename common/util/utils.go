@@ -35,26 +35,27 @@ type alg struct {
 	hashFun func([]byte) string
 }
 
-var defaultAlg = bccsp.SHA256
+const defaultAlg = "sha256"
 
-func InitDefaultHash(hashFunction string) {
-	defaultAlg = hashFunction
+var availableIDgenAlgs = map[string]alg{
+	defaultAlg: {GenerateIDfromTxSHAHash},
 }
 
-func ComputeHash(data []byte) (hash []byte) {
-	opts, err := bccsp.GetHashOpt(defaultAlg)
-	hash, err = factory.GetDefault().Hash(data, opts)
+// ComputeHash returns default hash algorithm on data
+func ComputeHash(data []byte) []byte {
+	hasher, err := factory.GetDefault().GetHash(nil)
 	if err != nil {
-		panic(fmt.Errorf("Failed computing hash on [% x]", data))
+		panic(fmt.Errorf("failed computing hash on [%x]", data))
 	}
-	return
+	hasher.Write(data)
+	return hasher.Sum(nil)
 }
 
 // ComputeSHA256 returns SHA2-256 on data
 func ComputeSHA256(data []byte) (hash []byte) {
 	hash, err := factory.GetDefault().Hash(data, &bccsp.SHA256Opts{})
 	if err != nil {
-		panic(fmt.Errorf("Failed computing SHA256 on [% x]", data))
+		panic(fmt.Errorf("failed computing SHA256 on [%x]", data))
 	}
 	return
 }
@@ -63,7 +64,7 @@ func ComputeSHA256(data []byte) (hash []byte) {
 func ComputeSHA3256(data []byte) (hash []byte) {
 	hash, err := factory.GetDefault().Hash(data, &bccsp.SHA3_256Opts{})
 	if err != nil {
-		panic(fmt.Errorf("Failed computing SHA3_256 on [% x]", data))
+		panic(fmt.Errorf("failed computing SHA3_256 on [%x]", data))
 	}
 	return
 }
@@ -72,7 +73,7 @@ func ComputeSHA3256(data []byte) (hash []byte) {
 func ComputeGMSM3(data []byte) (hash []byte) {
 	hash, err := factory.GetDefault().Hash(data, &bccsp.GMSM3Opts{})
 	if err != nil {
-		panic(fmt.Errorf("Failed computing GMSM3 on [% x]", data))
+		panic(fmt.Errorf("failed computing GMSM3 on [%x]", data))
 	}
 	return
 }
@@ -113,6 +114,28 @@ func CreateUtcTimestamp() *timestamp.Timestamp {
 	secs := now.Unix()
 	nanos := int32(now.UnixNano() - (secs * 1000000000))
 	return &(timestamp.Timestamp{Seconds: secs, Nanos: nanos})
+}
+
+//GenerateHashFromSignature returns a hash of the combined parameters
+func GenerateHashFromSignature(path string, args []byte) []byte {
+	return ComputeHash(args)
+}
+
+// GenerateIDfromTxSHAHash generates SHA256 hash using Tx payload
+func GenerateIDfromTxSHAHash(payload []byte) string {
+	return fmt.Sprintf("%x", ComputeHash(payload))
+}
+
+// GenerateIDWithAlg generates an ID using a custom algorithm
+func GenerateIDWithAlg(customIDgenAlg string, payload []byte) (string, error) {
+	if customIDgenAlg == "" {
+		customIDgenAlg = defaultAlg
+	}
+	var alg = availableIDgenAlgs[customIDgenAlg]
+	if alg.hashFun != nil {
+		return alg.hashFun(payload), nil
+	}
+	return "", fmt.Errorf("Wrong ID generation algorithm was given: %s", customIDgenAlg)
 }
 
 func idBytesToStr(id []byte) string {

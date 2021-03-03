@@ -22,32 +22,35 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/zhigui-projects/gmsm/sm2"
-	"github.com/zhigui-projects/gmsm/sm3"
 	"golang.org/x/crypto/sha3"
 )
-type config struct {
+
+type Config struct {
 	ellipticCurve elliptic.Curve
 	hashFunction  func() hash.Hash
 	aesBitLength  int
 	rsaBitLength  int
 }
 
-func (conf *config) setSecurityLevel(securityLevel int, hashFamily string) (err error) {
+func (conf *Config) GetHash() func() hash.Hash {
+	return conf.hashFunction
+}
+
+func (conf *Config) SetSecurityLevel(securityLevel int, hashFamily string) (err error) {
 	switch hashFamily {
 	case "SHA2":
 		err = conf.setSecurityLevelSHA2(securityLevel)
 	case "SHA3":
 		err = conf.setSecurityLevelSHA3(securityLevel)
-	case "GMSM3", "gmsm3":
-		err = conf.setSecurityLevelGMSM3(securityLevel)
+	case "SM3":
+		err = conf.setSecurityLevelSM3(securityLevel)
 	default:
 		err = fmt.Errorf("Hash Family not supported [%s]", hashFamily)
 	}
 	return
 }
 
-func (conf *config) setSecurityLevelSHA2(level int) (err error) {
+func (conf *Config) setSecurityLevelSHA2(level int) (err error) {
 	switch level {
 	case 256:
 		conf.ellipticCurve = elliptic.P256()
@@ -65,7 +68,7 @@ func (conf *config) setSecurityLevelSHA2(level int) (err error) {
 	return
 }
 
-func (conf *config) setSecurityLevelSHA3(level int) (err error) {
+func (conf *Config) setSecurityLevelSHA3(level int) (err error) {
 	switch level {
 	case 256:
 		conf.ellipticCurve = elliptic.P256()
@@ -82,12 +85,16 @@ func (conf *config) setSecurityLevelSHA3(level int) (err error) {
 	}
 	return
 }
-func (conf *config) setSecurityLevelGMSM3(level int) (err error) {
 
-
-	conf.ellipticCurve = sm2.P256Sm2()
-	conf.hashFunction = sm3.New
-	conf.rsaBitLength = 2048
-	conf.aesBitLength = 32
-	return nil
+func (conf *Config) setSecurityLevelSM3(level int) (err error) {
+	switch level {
+	case 256:
+		conf.ellipticCurve = SmCrypto.Sm2P256Curve()
+		conf.hashFunction = SmCrypto.NewSm3
+		conf.rsaBitLength = 2048
+		conf.aesBitLength = 32
+	default:
+		err = fmt.Errorf("Security level not supported [%d]", level)
+	}
+	return
 }

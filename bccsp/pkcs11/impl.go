@@ -34,7 +34,7 @@ func New(opts PKCS11Opts, keyStore bccsp.KeyStore) (bccsp.BCCSP, error) {
 		return nil, errors.Wrapf(err, "Failed initializing configuration")
 	}
 
-	swCSP, err := sw.NewWithParams(opts.SecLevel, opts.HashFamily, keyStore)
+	swCSP, err := sw.NewWithParams(opts.Algorithm, opts.SecLevel, opts.HashFamily, keyStore)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed initializing fallback SW BCCSP")
 	}

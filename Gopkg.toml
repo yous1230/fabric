@@ -6,6 +6,7 @@ required = [
     "golang.org/x/lint/golint",
     "golang.org/x/tools/cmd/goimports",
     "github.com/golang/protobuf/protoc-gen-go",
+    "github.com/zhigui-projects/gm-go",
 ]
 
 ignored = [
@@ -195,13 +196,11 @@ noverify = [
   version = "0.9.0"
 
 [[constraint]]
-  name = "github.com/zhigui-projects/gmsm"
-  version = "v1.2.2"
+  branch = "master"
+  name = "github.com/zhigui-projects/gm-plugins"
+  source = "ssh://git@gitlab.ziggurat.cn:10000/guomi/gm-plugins.git"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/zhigui-projects/x509"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/zhigui-projects/tls"
+  name = "github.com/zhigui-projects/gm-crypto"
+  source = "ssh://git@gitlab.ziggurat.cn:10000/guomi/gm-crypto.git"

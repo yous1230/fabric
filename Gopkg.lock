@@ -720,32 +720,43 @@
   version = "v1.1.9"
 
 [[projects]]
-  digest = "1:af466c3f2214112b54990ab0c4e8173b169dfd7f10904daa93a88e760836aac3"
-  name = "github.com/zhigui-projects/gmsm"
+  branch = "master"
+  digest = "1:9fc13268183f719296c36d00aa85a182e92a15fb8fdd4d4f138d90ac3a232ea9"
+  name = "github.com/zhigui-projects/gm-crypto"
   packages = [
+    "tls",
+    "x509",
+  ]
+  pruneopts = "NUT"
+  revision = "912d72077a9c3aa2e54178e618713e015d59c02f"
+  source = "ssh://git@gitlab.ziggurat.cn:10000/guomi/gm-crypto.git"
+
+[[projects]]
+  branch = "master"
+  digest = "1:67d8532cf04d5ea34790c7b07631f48ca08f566ca513abd082a286f3a24e7a67"
+  name = "github.com/zhigui-projects/gm-go"
+  packages = [
+    ".",
     "sm2",
     "sm3",
     "sm4",
   ]
   pruneopts = "NUT"
-  revision = "efc856098c247e95de05276601884df79ee3afb0"
-  version = "v1.2.2"
+  revision = "02ef315054d5113a712d92f48aea05d867b8132e"
 
 [[projects]]
   branch = "master"
-  digest = "1:208e9537706f969f0ff5f0f643a8652b720b0cc484a4952c52bd2af774b30fa2"
-  name = "github.com/zhigui-projects/tls"
-  packages = ["."]
+  digest = "1:8520304e4993aa92d5fc53dca079c99e46f9bcb1eb3ab25e4ea94deba81797a8"
+  name = "github.com/zhigui-projects/gm-plugins"
+  packages = [
+    ".",
+    "gosm",
+    "primitive",
+    "utils",
+  ]
   pruneopts = "NUT"
-  revision = "1c29b1879bebaa90d159809fdc08bb5fd56474eb"
-
-[[projects]]
-  branch = "master"
-  digest = "1:7ce92547d79e89c13871675c4736b74b85bd43348e6b979b0240bb6b2e1f8226"
-  name = "github.com/zhigui-projects/x509"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "a69e03e349659ebffa4948e2cf54f34c20641eff"
+  revision = "61f212b0eb18f9b0731d436b54520f1f8dd90094"
+  source = "ssh://git@gitlab.ziggurat.cn:10000/guomi/gm-plugins.git"
 
 [[projects]]
   digest = "1:7994f0511ea39eb049909df41301aabf5e6289b97c1084f7cc8c351d765469e1"
@@ -800,11 +811,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c05bf8c2fa69b514d2bdbd4ec2d43fe58c5a108c4488f34b6f8beecc37d18280"
+  digest = "1:9e45f03b6932805b20969053de308ff068ff03fcc390a2d2e222e9304f22cdff"
   name = "golang.org/x/crypto"
   packages = [
+    "chacha20poly1305",
     "cryptobyte",
     "cryptobyte/asn1",
+    "curve25519",
+    "internal/chacha20",
+    "internal/subtle",
+    "poly1305",
     "sha3",
     "ssh/terminal",
   ]
@@ -850,9 +866,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:847ffe30bb2463c17bf12bac2558b63f5dc104fd5920c8adf8c150a08cd176fb"
+  digest = "1:4a44ad185d16d398d7330d968d2fe1f4a9526b15b219218c2df802ac20ba6153"
   name = "golang.org/x/sys"
   packages = [
+    "cpu",
     "unix",
     "windows",
   ]
@@ -1039,11 +1056,11 @@
     "github.com/tedsuo/ifrit/ginkgomon",
     "github.com/tedsuo/ifrit/grouper",
     "github.com/willf/bitset",
-    "github.com/zhigui-projects/gmsm/sm2",
-    "github.com/zhigui-projects/gmsm/sm3",
-    "github.com/zhigui-projects/gmsm/sm4",
-    "github.com/zhigui-projects/tls",
-    "github.com/zhigui-projects/x509",
+    "github.com/zhigui-projects/gm-crypto/tls",
+    "github.com/zhigui-projects/gm-crypto/x509",
+    "github.com/zhigui-projects/gm-go",
+    "github.com/zhigui-projects/gm-plugins",
+    "github.com/zhigui-projects/gm-plugins/primitive",
     "go.etcd.io/etcd/etcdserver/api/snap",
     "go.etcd.io/etcd/pkg/fileutil",
     "go.etcd.io/etcd/raft",

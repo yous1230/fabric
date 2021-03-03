@@ -23,10 +23,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hyperledger/fabric/bccsp"
-
 	"github.com/golang/protobuf/proto"
-	bccsputils "github.com/hyperledger/fabric/bccsp/utils"
+	bccsp "github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/hyperledger/fabric/common/cauthdsl"
 	"github.com/hyperledger/fabric/common/configtx"
 	"github.com/hyperledger/fabric/common/crypto/tlsgen"
@@ -35,7 +33,7 @@ import (
 	"github.com/hyperledger/fabric/common/tools/configtxgen/encoder"
 	genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig"
 	"github.com/hyperledger/fabric/common/util"
-	cc "github.com/hyperledger/fabric/core/cclifecycle"
+	"github.com/hyperledger/fabric/core/cclifecycle"
 	lifecyclemocks "github.com/hyperledger/fabric/core/cclifecycle/mocks"
 	"github.com/hyperledger/fabric/core/comm"
 	"github.com/hyperledger/fabric/core/common/ccprovider"
@@ -478,7 +476,7 @@ func createClientAndService(t *testing.T, testdir string) (*client, *service) {
 
 	authInfo := &AuthInfo{
 		ClientIdentity:    signer.Creator,
-		ClientTlsCertHash: util.ComputeHash(clientKeyPair.TLSCert.Raw),
+		ClientTlsCertHash: util.ComputeSHA256(clientKeyPair.TLSCert.Raw),
 	}
 
 	dialer, err := comm.NewGRPCClient(comm.ClientConfig{
@@ -522,7 +520,7 @@ func createMSP(t *testing.T, dir, mspID string) (msp.MSP, *msprotos.FabricMSPCon
 	})
 	assert.NoError(t, err)
 
-	mspConf, err := msp.GetVerifyingMspConfig(dir, mspID, "bccsputils", bccsp.SHA2, bccsp.SHA256)
+	mspConf, err := msp.GetVerifyingMspConfig(dir, mspID, "bccsp", nil)
 	assert.NoError(t, err)
 
 	fabConf := &msprotos.FabricMSPConfig{}
@@ -637,7 +635,7 @@ func createGenesisBlock(cryptoConfigDir string) *common.Block {
 		org.MSPDir = filepath.Join(cryptoConfigDir, "ordererOrganizations", "example.com", "msp")
 	}
 	for i, org := range channelConfig.Application.Organizations {
-		if org.MSPType != "bccsputils" {
+		if org.MSPType != "bccsp" {
 			org.MSPDir = filepath.Join(idemixConfigDir)
 			continue
 		}
@@ -744,7 +742,7 @@ func (ps testPeerSet) Contains(peer *testPeer) bool {
 func peersToTestPeers(peers []*disc.Peer) testPeerSet {
 	var res testPeerSet
 	for _, p := range peers {
-		pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeHash(p.Identity)))
+		pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeSHA256(p.Identity)))
 		var stateInfoMember gdisc.NetworkMember
 		if p.StateInfoMessage != nil {
 			stateInfo, _ := p.StateInfoMessage.ToGossipMessage()
@@ -783,7 +781,7 @@ func newPeer(dir, mspID string, org, id int) *testPeer {
 		IdBytes: certBytes,
 	}
 	identityBytes := utils.MarshalOrPanic(sID)
-	pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeHash(identityBytes)))
+	pkiID := gcommon.PKIidType(hex.EncodeToString(util.ComputeSHA256(identityBytes)))
 	return &testPeer{
 		mspID:        mspID,
 		identity:     identityBytes,
@@ -918,7 +916,7 @@ func serializeIdentity(clientCert string, mspID string) ([]byte, error) {
 }
 
 func (si *signer) Sign(msg []byte) ([]byte, error) {
-	digest := util.ComputeHash(msg)
+	digest := util.ComputeSHA256(msg)
 	return signECDSA(si.key, digest)
 }
 
@@ -941,9 +939,9 @@ func signECDSA(k *ecdsa.PrivateKey, digest []byte) (signature []byte, err error)
 		return nil, err
 	}
 
-	s, _, err = bccsputils.ToLowS(&k.PublicKey, s)
+	s, _, err = bccsp.ToLowS(&k.PublicKey, s)
 	if err != nil {
 		return nil, err
 	}
-	return bccsputils.MarshalECDSASignature(r, s)
+	return bccsp.MarshalECDSASignature(r, s)
 }

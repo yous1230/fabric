@@ -79,6 +79,10 @@ func (k *rsaPrivateKey) PublicKey() (bccsp.Key, error) {
 	return &rsaPublicKey{&k.privKey.PublicKey}, nil
 }
 
+func (k *rsaPrivateKey) PrivateKey() (interface{}, error) {
+	return k.privKey, nil
+}
+
 type rsaPublicKey struct {
 	pubKey *rsa.PublicKey
 }
@@ -130,4 +134,8 @@ func (k *rsaPublicKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *rsaPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *rsaPublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [rsaPublicKey]")
 }

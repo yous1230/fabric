@@ -19,19 +19,10 @@ package utils
 import (
 	"crypto/x509"
 
-	"github.com/pkg/errors"
-	x "github.com/zhigui-projects/x509"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // DERToX509Certificate converts der to x509
 func DERToX509Certificate(asn1Data []byte) (*x509.Certificate, error) {
-	var cert *x509.Certificate
-	var err1, err2 error
-	if cert, err1 = x509.ParseCertificate(asn1Data); err1 == nil {
-		return cert, nil
-	}
-	if cert, err2 = x.X509(x.SM2).ParseCertificate(asn1Data); err2 == nil {
-		return cert, nil
-	}
-	return nil, errors.Errorf("DERToX509Certificate failed, err1: %v, err2: %v", err1, err2)
+	return gcx.GetX509().ParseCertificate(asn1Data)
 }

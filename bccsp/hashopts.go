@@ -79,3 +79,29 @@ func GetHashOpt(hashFunction string) (HashOpts, error) {
 	}
 	return nil, fmt.Errorf("hash function not recognized [%s]", hashFunction)
 }
+
+func GetHashOptFromFamily(securityLevel int, hashFamily string) (HashOpts, error) {
+	switch hashFamily {
+	case SHA2:
+		switch securityLevel {
+		case 256:
+			return &SHA256Opts{}, nil
+		case 384:
+			return &SHA384Opts{}, nil
+		default:
+			return nil, fmt.Errorf("security level not supported [%d] for hash family [%s]", securityLevel, hashFamily)
+		}
+	case SHA3:
+		switch securityLevel {
+		case 256:
+			return &SHA3_256Opts{}, nil
+		case 384:
+			return &SHA3_384Opts{}, nil
+		default:
+			return nil, fmt.Errorf("security level not supported [%d] for hash family [%s]", securityLevel, hashFamily)
+		}
+	case GMSM3:
+		return &GMSM3Opts{}, nil
+	}
+	return nil, fmt.Errorf("hash familiy not recognized [%s]", hashFamily)
+}

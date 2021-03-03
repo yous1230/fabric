@@ -226,7 +226,7 @@ func (h *testHelper) initLocalMSP() {
 	}
 
 	// Load local MSP
-	err = mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID, conf.General.Hash.HashFamily, conf.General.Hash.HashFunction)
+	err = mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID)
 	if err != nil {
 		panic(fmt.Errorf("Failed to initialize local MSP: %s", err))
 	}

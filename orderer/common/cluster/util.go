@@ -138,8 +138,8 @@ func (dialer *PredicateDialer) Dial(address string, verifyFunc RemoteVerifier) (
 		dialer.lock.RUnlock()
 
 		tlsConfig.RootCAs = x509.NewCertPool()
-		for _, pem := range serverRootCAs {
-			tlsConfig.RootCAs.AppendCertsFromPEM(pem)
+		for _, pemCert := range serverRootCAs {
+			_ = comm.AddPemToCertPool(pemCert, tlsConfig.RootCAs)
 		}
 	})
 }

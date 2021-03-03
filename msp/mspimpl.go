@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger/fabric/bccsp/signer"
 	m "github.com/hyperledger/fabric/protos/msp"
 	"github.com/pkg/errors"
-	x "github.com/zhigui-projects/x509"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // mspSetupFuncType is the prototype of the setup function
@@ -154,15 +154,13 @@ func (msp *bccspmsp) getCertFromPem(idBytes []byte) (*x509.Certificate, error) {
 	}
 
 	// get a cert
-	//var cert *x509.Certificate
-	//cert, err := x509.ParseCertificate(pemCert.Bytes)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "getCertFromPem error: failed to parse x509 cert")
-	//}
-	//
-	//return cert, nil
+	var cert *x509.Certificate
+	cert, err := gcx.GetX509().ParseCertificate(pemCert.Bytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "getCertFromPem error: failed to parse x509 cert")
+	}
 
-	return parseCertificate(pemCert.Bytes, "getCertFromPem error: failed to parse x509 cert")
+	return cert, nil
 }
 
 func (msp *bccspmsp) getIdentityFromConf(idBytes []byte) (Identity, bccsp.Key, error) {
@@ -174,6 +172,9 @@ func (msp *bccspmsp) getIdentityFromConf(idBytes []byte) (Identity, bccsp.Key, e
 
 	// get the public key in the right format
 	certPubK, err := msp.bccsp.KeyImport(cert, &bccsp.X509PublicKeyImportOpts{Temporary: true})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	mspId, err := newIdentity(cert, certPubK, msp)
 	if err != nil {
@@ -204,7 +205,8 @@ func (msp *bccspmsp) getSigningIdentityFromConf(sidInfo *m.SigningIdentityInfo) 
 		}
 
 		pemKey, _ := pem.Decode(sidInfo.PrivateSigner.KeyMaterial)
-		privKey, err = msp.bccsp.KeyImport(pemKey.Bytes, &bccsp.ECDSAPrivateKeyImportOpts{Temporary: true})
+		// hardcode
+		privKey, err = msp.bccsp.KeyImport(pemKey.Bytes, &bccsp.DefaultKeyImportOpts{Temporary: true})
 		if err != nil {
 			return nil, errors.WithMessage(err, "getIdentityFromBytes error: Failed to import EC private key")
 		}
@@ -385,13 +387,9 @@ func (msp *bccspmsp) deserializeIdentityInternal(serializedIdentity []byte) (Ide
 	if bl == nil {
 		return nil, errors.New("could not decode the PEM structure")
 	}
-	//cert, err := x509.ParseCertificate(bl.Bytes)
-	//if err != nil {
-	//	return nil, errors.Wrap(err, "parseCertificate failed")
-	//}
-	cert, err := parseCertificate(bl.Bytes, "parseCertificate failed")
+	cert, err := gcx.GetX509().ParseCertificate(bl.Bytes)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "parseCertificate failed")
 	}
 
 	// Now we have the certificate; make sure that its fields
@@ -707,8 +705,7 @@ func (msp *bccspmsp) getUniqueValidationChain(cert *x509.Certificate, opts x509.
 	if msp.opts == nil {
 		return nil, errors.New("the supplied identity has no verify options")
 	}
-	//TODO: SM
-	validationChains, err := cert.Verify(opts)
+	validationChains, err := gcx.GetX509().Verify(cert, opts)
 	if err != nil {
 		return nil, errors.WithMessage(err, "the supplied identity is not valid")
 	}
@@ -803,8 +800,6 @@ func (msp *bccspmsp) sanitizeCert(cert *x509.Certificate) (*x509.Certificate, er
 		if err != nil {
 			return nil, err
 		}
-	} else if isSM2SignedCert(cert) {
-		//TODO: SM
 	}
 	return cert, nil
 }
@@ -825,20 +820,6 @@ func (msp *bccspmsp) IsWellFormed(identity *m.SerializedIdentity) error {
 	if bl.Type != "CERTIFICATE" && bl.Type != "" {
 		return errors.Errorf("pem type is %s, should be 'CERTIFICATE' or missing", bl.Type)
 	}
-	//_, err := x509.ParseCertificate(bl.Bytes)
-	_, err := parseCertificate(bl.Bytes, "IsWellFormed failed")
+	_, err := gcx.GetX509().ParseCertificate(bl.Bytes)
 	return err
-}
-
-func parseCertificate(asn1Data []byte, errMsg string) (*x509.Certificate, error) {
-	var cert *x509.Certificate
-	var err1, err2 error
-	if cert, err1 = x509.ParseCertificate(asn1Data); err1 == nil {
-		return cert, nil
-	}
-	if cert, err2 = x.X509(x.SM2).ParseCertificate(asn1Data); err2 == nil {
-		return cert, nil
-	}
-
-	return nil, errors.Errorf("%s, err1: %v, err2: %v", errMsg, err1, err2)
 }

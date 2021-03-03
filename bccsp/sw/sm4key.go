@@ -19,7 +19,6 @@ import (
 	"errors"
 
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/zhigui-projects/gmsm/sm3"
 )
 
 type gmsm4PrivateKey struct {
@@ -39,7 +38,7 @@ func (k *gmsm4PrivateKey) Bytes() (raw []byte, err error) {
 
 // SKI returns the subject key identifier of this key.
 func (k *gmsm4PrivateKey) SKI() (ski []byte) {
-	hash := sm3.New()
+	hash := SmCrypto.NewSm3()
 	hash.Write([]byte{0x01})
 	hash.Write(k.privKey)
 	return hash.Sum(nil)
@@ -60,5 +59,9 @@ func (k *gmsm4PrivateKey) Private() bool {
 // PublicKey returns the corresponding public key part of an asymmetric public/private key pair.
 // This method returns an error in symmetric key schemes.
 func (k *gmsm4PrivateKey) PublicKey() (bccsp.Key, error) {
+	return nil, errors.New("Cannot call this method on a symmetric key")
+}
+
+func (k *gmsm4PrivateKey) PrivateKey() (interface{}, error) {
 	return nil, errors.New("Cannot call this method on a symmetric key")
 }

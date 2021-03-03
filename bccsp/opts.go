@@ -32,7 +32,8 @@ const (
 	// ECDSAReRand ECDSA key re-randomization
 	ECDSAReRand = "ECDSA_RERAND"
 
-	GMSM2 = "GMSM2"
+	// GM SM2 Elliptic Curve Digital Signature Algorithm over P-256 curve
+	GMSM2 = "SM2"
 
 	// RSA at the default security level.
 	// Each BCCSP may or may not support default security level. If not supported than
@@ -57,8 +58,8 @@ const (
 	AES192 = "AES192"
 	// AES Advanced Encryption Standard at 256 bit security level
 	AES256 = "AES256"
-
-	GMSM4 = "GMSM4"
+	// GM SM4
+	GMSM4 = "SM4"
 
 	// HMAC keyed-hash message authentication code
 	HMAC = "HMAC"
@@ -83,8 +84,8 @@ const (
 	SHA3_256 = "SHA3_256"
 	// SHA3_384
 	SHA3_384 = "SHA3_384"
-	// GMSM3
-	GMSM3 = "GMSM3"
+	// GM SM3
+	GMSM3 = "SM3"
 
 	// X509Certificate Label for X509 certificate related operation
 	X509Certificate = "X509Certificate"
@@ -327,101 +328,34 @@ func (opts *X509PublicKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }
 
-// GMSM4KeyGenOpts contains options for SM4 key generation at 128 security level
-type GMSM4KeyGenOpts struct {
+type DefaultKeyGenOpts struct {
 	Temporary bool
 }
 
 // Algorithm returns the key generation algorithm identifier (to be used).
-func (opts *GMSM4KeyGenOpts) Algorithm() string {
-	return GMSM4
+func (opts *DefaultKeyGenOpts) Algorithm() string {
+	return ""
 }
 
 // Ephemeral returns true if the key to generate has to be ephemeral,
 // false otherwise.
-func (opts *GMSM4KeyGenOpts) Ephemeral() bool {
+func (opts *DefaultKeyGenOpts) Ephemeral() bool {
 	return opts.Temporary
 }
 
-// GMSM2KeyGenOpts contains options for GMSM2 key generation.
-type GMSM2KeyGenOpts struct {
+// KeyType: PublicKey or PrivateKey
+type DefaultKeyImportOpts struct {
 	Temporary bool
+	KeyType   string
 }
 
-// Algorithm returns the key generation algorithm identifier (to be used).
-func (opts *GMSM2KeyGenOpts) Algorithm() string {
-	return GMSM2
+// Algorithm returns the key importation algorithm identifier (to be used).
+func (opts *DefaultKeyImportOpts) Algorithm() string {
+	return opts.KeyType
 }
 
 // Ephemeral returns true if the key to generate has to be ephemeral,
 // false otherwise.
-func (opts *GMSM2KeyGenOpts) Ephemeral() bool {
-	return opts.Temporary
-}
-
-// GMSM4ImportKeyOpts contains options for GMSM4 secret key importation in DER format
-// or PKCS#8 format.
-type GMSM4ImportKeyOpts struct {
-	Temporary bool
-}
-
-// Algorithm returns the key importation algorithm identifier (to be used).
-func (opts *GMSM4ImportKeyOpts) Algorithm() string {
-	return GMSM4
-}
-
-// Ephemeral returns true if the key generated has to be ephemeral,
-// false otherwise.
-func (opts *GMSM4ImportKeyOpts) Ephemeral() bool {
-	return opts.Temporary
-}
-
-// GMSM2PrivateKeyImportOpts contains options for GMSM2 private key importation in DER format
-// or PKCS#8 format.
-type GMSM2PrivateKeyImportOpts struct {
-	Temporary bool
-}
-
-// Algorithm returns the key importation algorithm identifier (to be used).
-func (opts *GMSM2PrivateKeyImportOpts) Algorithm() string {
-	return GMSM2
-}
-
-// Ephemeral returns true if the key generated has to be ephemeral,
-// false otherwise.
-func (opts *GMSM2PrivateKeyImportOpts) Ephemeral() bool {
-	return opts.Temporary
-}
-
-// GMSM2PrivateKeyImportOpts contains options for GMSM2 private key importation in DER format
-// or PKCS#8 format.
-type GMSM2PublicKeyImportOpts struct {
-	Temporary bool
-}
-
-// Algorithm returns the key importation algorithm identifier (to be used).
-func (opts *GMSM2PublicKeyImportOpts) Algorithm() string {
-	return GMSM2
-}
-
-// Ephemeral returns true if the key generated has to be ephemeral,
-// false otherwise.
-func (opts *GMSM2PublicKeyImportOpts) Ephemeral() bool {
-	return opts.Temporary
-}
-
-// ECDSAGoPublicKeyImportOpts contains options for ECDSA key importation from ecdsa.PublicKey
-type GMSM2GoPublicKeyImportOpts struct {
-	Temporary bool
-}
-
-// Algorithm returns the key importation algorithm identifier (to be used).
-func (opts *GMSM2GoPublicKeyImportOpts) Algorithm() string {
-	return GMSM2
-}
-
-// Ephemeral returns true if the key to generate has to be ephemeral,
-// false otherwise.
-func (opts *GMSM2GoPublicKeyImportOpts) Ephemeral() bool {
+func (opts *DefaultKeyImportOpts) Ephemeral() bool {
 	return opts.Temporary
 }

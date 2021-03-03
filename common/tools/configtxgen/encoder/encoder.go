@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package encoder
 
 import (
+	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/cauthdsl"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/crypto"
@@ -21,8 +24,6 @@ import (
 	"github.com/hyperledger/fabric/protos/orderer/etcdraft"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"github.com/hyperledger/fabric/protos/utils"
-
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
@@ -53,6 +54,14 @@ const (
 	// ImplicitMetaPolicyType is the 'Type' string for implicit meta policies
 	ImplicitMetaPolicyType = "ImplicitMeta"
 )
+
+var bccspConfig *factory.FactoryOpts
+var hashingAlgorithm string
+
+func SetBccspConfig(opts *factory.FactoryOpts, hash string) {
+	bccspConfig = opts
+	hashingAlgorithm = hash
+}
 
 func addValue(cg *cb.ConfigGroup, value channelconfig.ConfigValue, modPolicy string) {
 	cg.Values[value.Key()] = &cb.ConfigValue{
@@ -107,6 +116,15 @@ func addImplicitMetaPolicyDefaults(cg *cb.ConfigGroup) {
 	addPolicy(cg, policies.ImplicitMetaMajorityPolicy(channelconfig.AdminsPolicyKey), channelconfig.AdminsPolicyKey)
 	addPolicy(cg, policies.ImplicitMetaAnyPolicy(channelconfig.ReadersPolicyKey), channelconfig.AdminsPolicyKey)
 	addPolicy(cg, policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey), channelconfig.AdminsPolicyKey)
+}
+
+// addOrdererImplicitMetaPolicyDefaults adds the orderer's Readers/Writers/Admins/BlockValidation policies, with Any/Any/Majority/Any rules respectively.
+func addOrdererImplicitMetaPolicyDefaults(cg *cb.ConfigGroup) {
+	cg.Policies[BlockValidationPolicyKey] = &cb.ConfigPolicy{
+		Policy:    policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey).Value(),
+		ModPolicy: channelconfig.AdminsPolicyKey,
+	}
+	addImplicitMetaPolicyDefaults(cg)
 }
 
 // addSignaturePolicyDefaults adds the Readers/Writers/Admins policies as signature policies requiring one signature from the given mspID.
@@ -186,15 +204,11 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 	ordererGroup := cb.NewConfigGroup()
 	if len(conf.Policies) == 0 {
 		logger.Warningf("Default policy emission is deprecated, please include policy specifications for the orderer group in configtx.yaml")
-		addImplicitMetaPolicyDefaults(ordererGroup)
+		addOrdererImplicitMetaPolicyDefaults(ordererGroup)
 	} else {
 		if err := addPolicies(ordererGroup, conf.Policies, channelconfig.AdminsPolicyKey); err != nil {
 			return nil, errors.Wrapf(err, "error adding policies to orderer group")
 		}
-	}
-	ordererGroup.Policies[BlockValidationPolicyKey] = &cb.ConfigPolicy{
-		Policy:    policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey).Value(),
-		ModPolicy: channelconfig.AdminsPolicyKey,
 	}
 	addValue(ordererGroup, channelconfig.BatchSizeValue(
 		conf.BatchSize.MaxMessageCount,
@@ -240,7 +254,7 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 // NewConsortiumsGroup returns an org component of the channel configuration.  It defines the crypto material for the
 // organization (its MSP).  It sets the mod_policy of all elements to "Admins".
 func NewConsortiumOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org: %s", conf.Name)
 	}
@@ -265,7 +279,7 @@ func NewConsortiumOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, e
 // NewOrdererOrgGroup returns an orderer org component of the channel configuration.  It defines the crypto material for the
 // organization (its MSP).  It sets the mod_policy of all elements to "Admins".
 func NewOrdererOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org: %s", conf.Name)
 	}
@@ -327,7 +341,7 @@ func NewApplicationGroup(conf *genesisconfig.Application) (*cb.ConfigGroup, erro
 // NewApplicationOrgGroup returns an application org component of the channel configuration.  It defines the crypto material for the organization
 // (its MSP) as well as its anchor peers for use by the gossip network.  It sets the mod_policy of all elements to "Admins".
 func NewApplicationOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org %s", conf.Name)
 	}
@@ -431,6 +445,15 @@ func NewChannelCreateConfigUpdate(channelID string, conf *genesisconfig.Profile,
 		Value: utils.MarshalOrPanic(&cb.Consortium{
 			Name: conf.Consortium,
 		}),
+	}
+	if hashingAlgorithm != bccsp.SHA256 {
+		updt.ReadSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{Version: 0}
+		updt.WriteSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{
+			Version: 0,
+			Value: utils.MarshalOrPanic(&cb.HashingAlgorithm{
+				Name: hashingAlgorithm,
+			}),
+		}
 	}
 
 	return updt, nil

@@ -9,8 +9,8 @@ package tlsgen
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -18,6 +18,12 @@ import (
 	"math/big"
 	"net"
 	"time"
+
+	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/factory"
+	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
+	"github.com/zhigui-projects/gm-plugins/primitive"
 )
 
 func (p *CertKeyPair) PrivKeyString() string {
@@ -28,15 +34,21 @@ func (p *CertKeyPair) PubKeyString() string {
 	return base64.StdEncoding.EncodeToString(p.Cert)
 }
 
-func newPrivKey() (*ecdsa.PrivateKey, []byte, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func newPrivKey() (interface{}, []byte, error) {
+	key, err := factory.GetDefault().KeyGen(&bccsp.DefaultKeyGenOpts{Temporary: true})
 	if err != nil {
 		return nil, nil, err
 	}
-	privBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
+
+	privateKey, err := key.PrivateKey()
 	if err != nil {
 		return nil, nil, err
 	}
+	privBytes, err := key.Bytes()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return privateKey, privBytes, nil
 }
 
@@ -58,6 +70,17 @@ func newCertKeyPair(isCA bool, isServer bool, host string, certSigner crypto.Sig
 	privateKey, privBytes, err := newPrivKey()
 	if err != nil {
 		return nil, err
+	}
+	var signer crypto.Signer
+	switch privateKey.(type) {
+	case *ecdsa.PrivateKey:
+		signer = privateKey.(*ecdsa.PrivateKey)
+	case *rsa.PrivateKey:
+		signer = privateKey.(*rsa.PrivateKey)
+	case *primitive.Sm2PrivateKey:
+		signer = privateKey.(*primitive.Sm2PrivateKey)
+	default:
+		return nil, errors.New("Invalid key type. It must be *ecdsa.PrivateKey, *rsa.PrivateKey or  *primitive.Sm2PrivateKey")
 	}
 
 	template, err := newCertTemplate()
@@ -87,16 +110,16 @@ func newCertKeyPair(isCA bool, isServer bool, host string, certSigner crypto.Sig
 	// If no parent cert, it's a self signed cert
 	if parent == nil || certSigner == nil {
 		parent = &template
-		certSigner = privateKey
+		certSigner = signer
 	}
-	rawBytes, err := x509.CreateCertificate(rand.Reader, &template, parent, &privateKey.PublicKey, certSigner)
+	rawBytes, err := gcx.GetX509().CreateCertificate(rand.Reader, &template, parent, signer.Public(), certSigner)
 	if err != nil {
 		return nil, err
 	}
 	pubKey := encodePEM("CERTIFICATE", rawBytes)
 
 	block, _ := pem.Decode(pubKey)
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := gcx.GetX509().ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +127,7 @@ func newCertKeyPair(isCA bool, isServer bool, host string, certSigner crypto.Sig
 	return &CertKeyPair{
 		Key:     privKey,
 		Cert:    pubKey,
-		Signer:  privateKey,
+		Signer:  signer,
 		TLSCert: cert,
 	}, nil
 }
