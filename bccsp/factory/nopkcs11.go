@@ -25,6 +25,8 @@ import (
 	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
+const pkcs11Enabled = false
+
 // FactoryOpts holds configuration information used to initialize factory implementations
 type FactoryOpts struct {
 	ProviderName string      `mapstructure:"default" json:"default" yaml:"Default"`

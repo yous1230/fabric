@@ -42,7 +42,7 @@ type GRPCServer struct {
 	// the tlsConfig.ClientCAs indexed by subject
 	clientRootCAs map[string]*x509.Certificate
 	// TLS configuration used by the grpc server
-	tlsConfig *tls.Config
+	tls *TLSConfig
 }
 
 // NewGRPCServer creates a new implementation of a GRPCServer given a
@@ -96,27 +96,27 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 				return &cert, nil
 			}
 			//base server certificate
-			grpcServer.tlsConfig = &tls.Config{
+			grpcServer.tls = NewTLSConfig(&tls.Config{
 				GetCertificate:         getCert,
 				SessionTicketsDisabled: true,
 				CipherSuites:           secureConfig.CipherSuites,
-			}
+			})
 
 			if serverConfig.SecOpts.TimeShift > 0 {
 				timeShift := serverConfig.SecOpts.TimeShift
-				grpcServer.tlsConfig.Time = func() time.Time {
+				grpcServer.tls.config.Time = func() time.Time {
 					return time.Now().Add((-1) * timeShift)
 				}
 			}
-			grpcServer.tlsConfig.ClientAuth = tls.RequestClientCert
+			grpcServer.tls.config.ClientAuth = tls.RequestClientCert
 			//check if client authentication is required
 			if secureConfig.RequireClientCert {
 				//require TLS client auth
-				grpcServer.tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+				grpcServer.tls.config.ClientAuth = tls.RequireAndVerifyClientCert
 				//if we have client root CAs, create a certPool
 				if len(secureConfig.ClientRootCAs) > 0 {
 					grpcServer.clientRootCAs = make(map[string]*x509.Certificate)
-					grpcServer.tlsConfig.ClientCAs = x509.NewCertPool()
+					grpcServer.tls.config.ClientCAs = x509.NewCertPool()
 					for _, clientRootCA := range secureConfig.ClientRootCAs {
 						err = grpcServer.appendClientRootCA(clientRootCA)
 						if err != nil {
@@ -129,9 +129,9 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			// create credentials and add to server options
 			var creds credentials.TransportCredentials
 			if factory.GetDefaultAlgorithm() == bccsp.GMSM2 {
-				creds = NewTLS(grpcServer.tlsConfig, serverConfig.Logger)
+				creds = NewTLS(grpcServer.tls, serverConfig.Logger)
 			} else {
-				creds = NewServerTransportCredentials(grpcServer.tlsConfig, serverConfig.Logger)
+				creds = NewServerTransportCredentials(grpcServer.tls, serverConfig.Logger)
 			}
 			serverOpts = append(serverOpts, grpc.Creds(creds))
 		} else {
@@ -201,14 +201,14 @@ func (gServer *GRPCServer) ServerCertificate() tls.Certificate {
 // TLSEnabled is a flag indicating whether or not TLS is enabled for the
 // GRPCServer instance
 func (gServer *GRPCServer) TLSEnabled() bool {
-	return gServer.tlsConfig != nil
+	return gServer.tls != nil
 }
 
 // MutualTLSRequired is a flag indicating whether or not client certificates
 // are required for this GRPCServer instance
 func (gServer *GRPCServer) MutualTLSRequired() bool {
-	return gServer.tlsConfig != nil &&
-		gServer.tlsConfig.ClientAuth ==
+	return gServer.TLSEnabled() &&
+		gServer.tls.Config().ClientAuth ==
 			tls.RequireAndVerifyClientCert
 }
 
@@ -252,7 +252,7 @@ func (gServer *GRPCServer) appendClientRootCA(clientRoot []byte) error {
 
 	for i, cert := range certs {
 		//first add to the ClientCAs
-		gServer.tlsConfig.ClientCAs.AddCert(cert)
+		gServer.tls.AddClientRootCA(cert)
 		//add it to our clientRootCAs map using subject as key
 		gServer.clientRootCAs[subjects[i]] = cert
 	}
@@ -279,7 +279,7 @@ func (gServer *GRPCServer) RemoveClientRootCAs(clientRoots [][]byte) error {
 	}
 
 	//replace the current ClientCAs pool
-	gServer.tlsConfig.ClientCAs = certPool
+	gServer.tls.SetClientCAs(certPool)
 	return nil
 }
 
@@ -338,6 +338,6 @@ func (gServer *GRPCServer) SetClientRootCAs(clientRoots [][]byte) error {
 	//replace the internal map
 	gServer.clientRootCAs = clientRootCAs
 	//replace the current ClientCAs pool
-	gServer.tlsConfig.ClientCAs = certPool
+	gServer.tls.SetClientCAs(certPool)
 	return nil
 }
