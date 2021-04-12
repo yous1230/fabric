@@ -86,6 +86,7 @@ func initFactories(config *FactoryOpts) error {
 	if !ok {
 		return errors.Errorf("Could not find default `%s` BCCSP", config.ProviderName)
 	}
+	gcx.InitX509(defaultAlgorithm)
 	return nil
 }
 

@@ -43,6 +43,7 @@ type GRPCServer struct {
 	clientRootCAs map[string]*x509.Certificate
 	// TLS configuration used by the grpc server
 	tls *TLSConfig
+	tlsConfig *tls.Config
 }
 
 // NewGRPCServer creates a new implementation of a GRPCServer given a
@@ -129,7 +130,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			// create credentials and add to server options
 			var creds credentials.TransportCredentials
 			if factory.GetDefaultAlgorithm() == bccsp.GMSM2 {
-				creds = NewTLS(grpcServer.tls, serverConfig.Logger)
+				creds = NewTLS(grpcServer.tlsConfig, serverConfig.Logger)
 			} else {
 				creds = NewServerTransportCredentials(grpcServer.tls, serverConfig.Logger)
 			}

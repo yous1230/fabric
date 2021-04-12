@@ -23,7 +23,6 @@ import (
 )
 
 func SM4Encrypt(key, src []byte) ([]byte, error) {
-	//iv := make([]byte, SmCrypto.Sm4BlockSize())
 	iv := make([]byte, 16)
 	ciphertxt, err := sm4Encrypt(key, iv, src)
 	if err != nil {
@@ -33,7 +32,6 @@ func SM4Encrypt(key, src []byte) ([]byte, error) {
 }
 
 func SM4Decrypt(key, src []byte) ([]byte, error) {
-	//iv := make([]byte, SmCrypto.Sm4BlockSize())
 	iv := make([]byte, 16)
 	plaintext, err := sm4Decrypt(key, iv, src)
 	if err != nil {
