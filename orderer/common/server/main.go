@@ -1,6 +1,5 @@
 /*
 Copyright IBM Corp. All Rights Reserved.
-
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -651,7 +650,7 @@ func initializeMultichannelRegistrar(
 	srvConf comm.ServerConfig,
 	srv *comm.GRPCServer,
 	conf *localconfig.TopLevel,
-	signer crypto.LocalSigner,
+	signer crypto.SignerSupport,
 	metricsProvider metrics.Provider,
 	healthChecker healthChecker,
 	lf blockledger.Factory,
@@ -671,13 +670,6 @@ func initializeMultichannelRegistrar(
 	registrar := multichannel.NewRegistrar(*conf, lf, &localSigner{signer: signer}, metricsProvider, callbacks...)
 
 	consenters := make(map[string]consensus.Consenter)
-
-	var icr etcdraft.InactiveChainRegistry
-	if isClusterType(bootstrapBlock) {
-		etcdConsenter := initializeEtcdraftConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
-		icr = etcdConsenter.InactiveChainRegistry
-	}
-
 	consenters["solo"] = solo.New()
 	consenterType := consensusType(genesisBlock)
 	var icr cluster.InactiveChainRegistry
@@ -696,11 +688,11 @@ func initializeMultichannelRegistrar(
 		}
 	}
 	var kafkaMetrics *kafka.Metrics
+
 	consenters["kafka"], kafkaMetrics = kafka.New(conf.Kafka, metricsProvider, healthChecker, icr, registrar.CreateChain)
 	// Note, we pass a 'nil' channel here, we could pass a channel that
 	// closes if we wished to cleanup this routine on exit.
 	go kafkaMetrics.PollGoMetricsUntilStop(time.Minute, nil)
-
 	registrar.Initialize(consenters)
 	return registrar
 }
@@ -765,7 +757,6 @@ func constructInactiveChainReplicator(
 	bootstrapBlock *cb.Block,
 	logger *flogging.FabricLogger,
 ) *inactiveChainReplicator {
-
 	replicationRefreshInterval := conf.General.Cluster.ReplicationBackgroundRefreshInterval
 	if replicationRefreshInterval == 0 {
 		replicationRefreshInterval = defaultReplicationBackgroundRefreshInterval
@@ -797,7 +788,6 @@ func constructInactiveChainReplicator(
 	}
 
 	return icr
-
 }
 
 func newOperationsSystem(ops localconfig.Operations, metrics localconfig.Metrics) *operations.System {
@@ -979,3 +969,4 @@ func (ls *localSigner) NewSignatureHeader() (*cb.SignatureHeader, error) {
 func (ls *localSigner) Sign(message []byte) ([]byte, error) {
 	return ls.signer.Sign(message)
 }
+

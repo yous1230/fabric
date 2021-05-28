@@ -178,11 +178,15 @@ func (s *MSPMessageCryptoService) verifyHeaderWithMetadata(channelID string, hea
 	mcsLogger.Debugf("Got block validation policy for channel [%s] with flag [%t]", channelID, ok)
 
 	id2identities := s.id2IdentitiesFetcher.Id2Identities(channelID)
+	if id2identities == nil {
+		mcsLogger.Info("id2identities is nil")
+	}
 
 	// - Prepare SignedData
 	signatureSet := []*pcommon.SignedData{}
 	for _, metadataSignature := range metadata.Signatures {
 		identity, ok := id2identities[metadataSignature.SignerId]
+		mcsLogger.Debugf("metadataSignature.SignerId is %d", metadataSignature.SignerId)
 		if !ok {
 			return fmt.Errorf("identity for id %d was not found", metadataSignature.SignerId)
 		}

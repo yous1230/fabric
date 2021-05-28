@@ -1,6 +1,5 @@
 /*
 Copyright IBM Corp. All Rights Reserved.
-
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -33,13 +32,6 @@ import (
 // CreateChainCallback creates a new chain
 type CreateChainCallback func()
 
-// InactiveChainRegistry registers chains that are inactive
-type InactiveChainRegistry interface {
-	// TrackChain tracks a chain with the given name, and calls the given callback
-	// when this chain should be created.
-	TrackChain(chainName string, genesisBlock *common.Block, createChain func())
-}
-
 //go:generate mockery -dir . -name ChainGetter -case underscore -output mocks
 
 // ChainGetter obtains instances of ChainSupport for the given channel
@@ -59,10 +51,10 @@ type Config struct {
 
 // Consenter implements etcdraft consenter
 type Consenter struct {
-	CreateChain           func(chainName string)
-	InactiveChainRegistry InactiveChainRegistry
-	Dialer                *cluster.PredicateDialer
-	Communication         cluster.Communicator
+	CreateChain func(chainName string)
+	cluster.InactiveChainRegistry
+	Dialer        *cluster.PredicateDialer
+	Communication cluster.Communicator
 	*Dispatcher
 	Chains         ChainGetter
 	Logger         *flogging.FabricLogger
