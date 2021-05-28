@@ -23,10 +23,10 @@ services:
       - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-      - CORE_PEER_BCCSP_DEFAULT=SW
-      - CORE_PEER_BCCSP_SW_ALGORITHM=SM2
-      - CORE_PEER_BCCSP_SW_HASH=SM3
-      - CORE_PEER_BCCSP_SW_SECURITY=256
+#      - CORE_PEER_BCCSP_DEFAULT=SW
+#     - CORE_PEER_BCCSP_SW_ALGORITHM=SM2
+#      - CORE_PEER_BCCSP_SW_HASH=SM3
+#      - CORE_PEER_BCCSP_SW_SECURITY=256
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
 
@@ -50,9 +50,9 @@ services:
       - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
       - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
       - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
-      - ORDERER_GENERAL_BCCSP_DEFAULT=SW
-      - ORDERER_GENERAL_BCCSP_SW_ALGORITHM=SM2
-      - ORDERER_GENERAL_BCCSP_SW_HASH=SM3
+#      - ORDERER_GENERAL_BCCSP_DEFAULT=SW
+#      - ORDERER_GENERAL_BCCSP_SW_ALGORITHM=SM2
+#      - ORDERER_GENERAL_BCCSP_SW_HASH=SM3
 #      - ORDERER_GENERAL_BCCSP_SW_SECURITY=256
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric
     command: orderer

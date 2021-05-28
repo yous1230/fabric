@@ -58,5 +58,7 @@ func (f *expirationCheckFilter) ProcessProposal(ctx context.Context, signedProp 
 	if err := validateProposal(signedProp); err != nil {
 		return nil, err
 	}
+	println("start from here12")
+	println("signedProp12 is ", signedProp.Signature)
 	return f.next.ProcessProposal(ctx, signedProp)
 }

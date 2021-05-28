@@ -33,6 +33,7 @@ import (
 	"github.com/hyperledger/fabric/protos/orderer/smartbft"
 	utils2 "github.com/hyperledger/fabric/protos/utils"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 //go:generate counterfeiter -o mocks/mock_blockpuller.go . BlockPuller
@@ -352,9 +353,12 @@ func RemoteNodesFromConfigBlock(block *common.Block, selfID uint64, logger *flog
 		// Validate certificate structure
 		for _, cert := range [][]byte{serverCertAsDER, clientCertAsDER} {
 			if _, err := x509.ParseCertificate(cert); err != nil {
-				pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
-				logger.Errorf("Invalid certificate: %s", string(pemBytes))
-				return nil, err
+				_, err = gcx.GetX509SM2().ParseCertificate(cert)
+				if err != nil {
+					pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
+					logger.Errorf("Invalid certificate : %s", string(pemBytes))
+						return nil, err
+				}
 			}
 		}
 

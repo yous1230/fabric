@@ -191,6 +191,7 @@ func GetOrdererEndpointOfChain(chainID string, signer msp.SigningIdentity, endor
 		return nil, errors.WithMessage(err, "error creating signed GetConfigBlock proposal")
 	}
 
+	println("start from here1")
 	proposalResp, err := endorserClient.ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return nil, errors.WithMessage(err, "error endorsing GetConfigBlock")

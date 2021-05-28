@@ -147,14 +147,13 @@ func (e *Endorser) callChaincode(txParams *ccprovider.TransactionParams, version
 	if err != nil {
 		return nil, nil, err
 	}
-
+	println("Execute chaincode ----------")
 	// per doc anything < 400 can be sent as TX.
 	// fabric errors will always be >= 400 (ie, unambiguous errors )
 	// "lscc" will respond with status 200 or 500 (ie, unambiguous OK or ERROR)
 	if res.Status >= shim.ERRORTHRESHOLD {
 		return res, nil, nil
 	}
-
 	// ----- BEGIN -  SECTION THAT MAY NEED TO BE DONE IN LSCC ------
 	// if this a call to deploy a chaincode, We need a mechanism
 	// to pass TxSimulator into LSCC. Till that is worked out this
@@ -163,11 +162,15 @@ func (e *Endorser) callChaincode(txParams *ccprovider.TransactionParams, version
 	//
 	// NOTE that if there's an error all simulation, including the chaincode
 	// table changes in lscc will be thrown away
+	endorserLogger.Debugf("cid.Name is %v , len(input.Args) = %v, input.Args[0] is %v", cid.Name, len(input.Args), string(input.Args[0]))
 	if cid.Name == "lscc" && len(input.Args) >= 3 && (string(input.Args[0]) == "deploy" || string(input.Args[0]) == "upgrade") {
+		// 获取链码部署的基本结构
 		userCDS, err := putils.GetChaincodeDeploymentSpec(input.Args[2], e.PlatformRegistry)
 		if err != nil {
 			return nil, nil, err
 		}
+		println("get chaincode structure")
+
 
 		var cds *pb.ChaincodeDeploymentSpec
 		cds, err = e.SanitizeUserCDS(userCDS)
@@ -175,13 +178,17 @@ func (e *Endorser) callChaincode(txParams *ccprovider.TransactionParams, version
 			return nil, nil, err
 		}
 
+		println("e.SanitizeUserCDS --------")
 		// this should not be a system chaincode
 		if e.s.IsSysCC(cds.ChaincodeSpec.ChaincodeId.Name) {
 			return nil, nil, errors.Errorf("attempting to deploy a system chaincode %s/%s", cds.ChaincodeSpec.ChaincodeId.Name, txParams.ChannelID)
 		}
-
+		println("if syscc return ------")
+		// 启动用户链码
 		_, _, err = e.s.ExecuteLegacyInit(txParams, txParams.ChannelID, cds.ChaincodeSpec.ChaincodeId.Name, cds.ChaincodeSpec.ChaincodeId.Version, txParams.TxID, txParams.SignedProp, txParams.Proposal, cds)
+
 		if err != nil {
+			println("e.s.ExecuteLegacyInit have error -------")
 			// increment the failure to indicate instantion/upgrade failures
 			meterLabels := []string{
 				"channel", txParams.ChannelID,
@@ -197,11 +204,12 @@ func (e *Endorser) callChaincode(txParams *ccprovider.TransactionParams, version
 }
 
 func (e *Endorser) SanitizeUserCDS(userCDS *pb.ChaincodeDeploymentSpec) (*pb.ChaincodeDeploymentSpec, error) {
+	endorserLogger.Debug("SanitizeUserCDS ----------")
 	fsCDS, err := e.s.GetChaincodeDeploymentSpecFS(userCDS)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot deploy a chaincode which is not installed")
 	}
-
+	endorserLogger.Debugf("SanitizeUserCDS: installed chaincode")
 	sanitizedCDS := proto.Clone(fsCDS).(*pb.ChaincodeDeploymentSpec)
 	sanitizedCDS.CodePackage = nil
 	sanitizedCDS.ChaincodeSpec.Input = userCDS.ChaincodeSpec.Input
@@ -236,6 +244,7 @@ func (e *Endorser) SimulateProposal(txParams *ccprovider.TransactionParams, cid 
 			return nil, nil, nil, nil, err
 		}
 	} else {
+		print("Here is syscc")
 		version = util.GetSysCCVersion()
 	}
 
@@ -246,6 +255,8 @@ func (e *Endorser) SimulateProposal(txParams *ccprovider.TransactionParams, cid 
 	var ccevent *pb.ChaincodeEvent
 	res, ccevent, err = e.callChaincode(txParams, version, cis.ChaincodeSpec.Input, cid)
 	if err != nil {
+		endorserLogger.Error("e.callChaincode error")
+		endorserLogger.Errorf("res is %s", res)
 		endorserLogger.Errorf("[%s][%s] failed to invoke chaincode %s, error: %+v", txParams.ChannelID, shorttxid(txParams.TxID), cid, err)
 		return nil, nil, nil, nil, err
 	}
@@ -350,7 +361,9 @@ func (e *Endorser) preProcess(signedProp *pb.SignedProposal) (*validateResult, e
 	// at first, we check whether the message is valid
 	prop, hdr, hdrExt, err := validation.ValidateProposalMessage(signedProp)
 
+	println("validate proposal message")
 	if err != nil {
+		println("validate error!!!")
 		e.Metrics.ProposalValidationFailed.Add(1)
 		vr.resp = &pb.ProposalResponse{Response: &pb.Response{Status: 500, Message: err.Error()}}
 		return vr, err
@@ -422,6 +435,7 @@ func (e *Endorser) preProcess(signedProp *pb.SignedProposal) (*validateResult, e
 // ProcessProposal process the Proposal
 func (e *Endorser) ProcessProposal(ctx context.Context, signedProp *pb.SignedProposal) (*pb.ProposalResponse, error) {
 	// start time for computing elapsed time metric for successfully endorsed proposals
+	println("process proposal")
 	startTime := time.Now()
 	e.Metrics.ProposalsReceived.Add(1)
 
@@ -447,6 +461,10 @@ func (e *Endorser) ProcessProposal(ctx context.Context, signedProp *pb.SignedPro
 
 		endorserLogger.Debug("Exit: request from", addr)
 	}()
+
+	println("start from here20")
+	println("signedProp20 is ", signedProp.Signature)
+
 
 	// 0 -- check and validate
 	vr, err := e.preProcess(signedProp)
@@ -497,6 +515,7 @@ func (e *Endorser) ProcessProposal(ctx context.Context, signedProp *pb.SignedPro
 	//       to validate the supplied action before endorsing it
 
 	// 1 -- simulate
+	println("start simulate")
 	cd, res, simulationResult, ccevent, err := e.SimulateProposal(txParams, hdrExt.ChaincodeId)
 	if err != nil {
 		return &pb.ProposalResponse{Response: &pb.Response{Status: 500, Message: err.Error()}}, nil

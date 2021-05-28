@@ -78,6 +78,7 @@ func install(msg proto.Message, cf *ChaincodeCmdFactory) error {
 	}
 
 	// install is currently only supported for one peer
+	println("start from here4")
 	proposalResponse, err := cf.EndorserClients[0].ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return fmt.Errorf("Error endorsing %s: %s", chainFuncName, err)

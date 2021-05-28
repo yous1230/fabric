@@ -127,7 +127,8 @@ func (s *SupportImpl) ExecuteLegacyInit(txParams *ccprovider.TransactionParams, 
 		Name:    name,
 		Version: version,
 	}
-
+	println("cccid name is ", name)
+	println("cccid version is ", version)
 	return s.ChaincodeSupport.ExecuteLegacyInit(txParams, cccid, cds)
 }
 

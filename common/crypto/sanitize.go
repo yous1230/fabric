@@ -12,6 +12,8 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
+	"github.com/zhigui-projects/gm-plugins/primitive"
 	"math/big"
 	"time"
 
@@ -34,44 +36,96 @@ func SanitizeIdentity(identity []byte) ([]byte, error) {
 	}
 	cert, err := x509.ParseCertificate(der.Bytes)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
+		//gcx.InitX509("SM2")
+		if cert, err = gcx.GetX509SM2().ParseCertificate(der.Bytes); err != nil {
+			return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
+		}
+		//return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
 	}
 
-	r, s, err := utils.UnmarshalECDSASignature(cert.Signature)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshaling ECDSA signature on identity: %s", string(sID.IdBytes))
-	}
-
-	// We assume that the consenter and the CA use the same signature scheme.
-	curveOrderUsedByCryptoGen := cert.PublicKey.(*ecdsa.PublicKey).Curve.Params().N
-	halfOrder := new(big.Int).Rsh(curveOrderUsedByCryptoGen, 1)
-	// Low S, nothing to do here!
-	if s.Cmp(halfOrder) != 1 {
-		return identity, nil
-	}
-	// Else it's high-S, so shift it below half the order.
-	s.Sub(curveOrderUsedByCryptoGen, s)
+	algs := cert.SignatureAlgorithm.String()
+	//fmt.Printf("algs is %s", algs)
 
 	var newCert certificate
-	_, err = asn1.Unmarshal(cert.Raw, &newCert)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshaling certificate")
-	}
 
-	newSig, err := utils.MarshalECDSASignature(r, s)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshaling ECDSA signature")
-	}
-	newCert.SignatureValue = asn1.BitString{Bytes: newSig, BitLength: len(newSig) * 8}
+	if "100" == algs {
+		r, s, err := utils.UnmarshalSM2Signature(cert.Signature)
+		//fmt.Printf("r is %s", r)
+		//fmt.Printf("s is %s", s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshaling ECDSA signature on identity: %s", string(sID.IdBytes))
+		}
 
-	newCert.Raw = nil
-	newRaw, err := asn1.Marshal(newCert)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshaling new certificate")
-	}
+		// We assume that the consenter and the CA use the same signature scheme.
+		//params := cert.PublicKey.(*primitive.Sm2PublicKey).Curve.Params()
+		//fmt.Print(params)
+		curveOrderUsedByCryptoGen := cert.PublicKey.(*primitive.Sm2PublicKey).Curve.Params().N
+		halfOrder := new(big.Int).Rsh(curveOrderUsedByCryptoGen, 1)
+		// Low S, nothing to do here!
+		if s.Cmp(halfOrder) != 1 {
+			return identity, nil
+		}
+		// Else it's high-S, so shift it below half the order.
+		s.Sub(curveOrderUsedByCryptoGen, s)
 
-	sID.IdBytes = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newRaw})
-	return proto.Marshal(sID)
+
+		_, err = asn1.Unmarshal(cert.Raw, &newCert)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshaling certificate")
+		}
+		newSig, err := utils.MarshalSM2Signature(r, s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshaling ECDSA signature")
+		}
+
+		newCert.SignatureValue = asn1.BitString{Bytes: newSig, BitLength: len(newSig) * 8}
+
+		newCert.Raw = nil
+		newRaw, err := asn1.Marshal(newCert)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshaling new certificate")
+		}
+
+		sID.IdBytes = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newRaw})
+		return proto.Marshal(sID)
+
+	}else{
+		r, s, err := utils.UnmarshalECDSASignature(cert.Signature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshaling ECDSA signature on identity: %s", string(sID.IdBytes))
+		}
+
+		// We assume that the consenter and the CA use the same signature scheme.
+		curveOrderUsedByCryptoGen := cert.PublicKey.(*ecdsa.PublicKey).Curve.Params().N
+		halfOrder := new(big.Int).Rsh(curveOrderUsedByCryptoGen, 1)
+		// Low S, nothing to do here!
+		if s.Cmp(halfOrder) != 1 {
+			return identity, nil
+		}
+		// Else it's high-S, so shift it below half the order.
+		s.Sub(curveOrderUsedByCryptoGen, s)
+
+
+		_, err = asn1.Unmarshal(cert.Raw, &newCert)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed unmarshaling certificate")
+		}
+		newSig, err := utils.MarshalECDSASignature(r, s)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshaling ECDSA signature")
+		}
+
+		newCert.SignatureValue = asn1.BitString{Bytes: newSig, BitLength: len(newSig) * 8}
+
+		newCert.Raw = nil
+		newRaw, err := asn1.Marshal(newCert)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshaling new certificate")
+		}
+
+		sID.IdBytes = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: newRaw})
+		return proto.Marshal(sID)
+	}
 }
 
 type certificate struct {

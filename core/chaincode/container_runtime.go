@@ -45,6 +45,7 @@ type ContainerRuntime struct {
 
 // Start launches chaincode in a runtime environment.
 func (c *ContainerRuntime) Start(ccci *ccprovider.ChaincodeContainerInfo, codePackage []byte) error {
+	println("start ContainerRuntime")
 	cname := ccci.Name + ":" + ccci.Version
 
 	lc, err := c.LaunchConfig(cname, ccci.Type)
@@ -74,6 +75,7 @@ func (c *ContainerRuntime) Start(ccci *ccprovider.ChaincodeContainerInfo, codePa
 		},
 	}
 
+	// 开始启动容器的步骤
 	if err := c.Processor.Process(ccci.ContainerType, scr); err != nil {
 		return errors.WithMessage(err, "error starting container")
 	}
@@ -101,6 +103,7 @@ func (c *ContainerRuntime) Stop(ccci *ccprovider.ChaincodeContainerInfo) error {
 
 // Wait waits for the container runtime to terminate.
 func (c *ContainerRuntime) Wait(ccci *ccprovider.ChaincodeContainerInfo) (int, error) {
+	println("Enter Wait -----------")
 	type result struct {
 		exitCode int
 		err      error
@@ -118,9 +121,13 @@ func (c *ContainerRuntime) Wait(ccci *ccprovider.ChaincodeContainerInfo) (int, e
 		},
 	}
 
+	println("ccci.ContainerType is ", ccci.ContainerType)
+
 	if err := c.Processor.Process(ccci.ContainerType, wcr); err != nil {
+		println("wait is wrong!")
 		return -1, err
 	}
+	println("Process achieved --------")
 	r := <-resultCh
 
 	return r.exitCode, r.err

@@ -1246,11 +1246,13 @@ func (h *Handler) Execute(txParams *ccprovider.TransactionParams, cccid *ccprovi
 
 	txctx, err := h.TXContexts.Create(txParams)
 	if err != nil {
+		fmt.Printf("h.TXContexts.Create(txParams) error")
 		return nil, err
 	}
 	defer h.TXContexts.Delete(msg.ChannelId, msg.Txid)
 
 	if err := h.setChaincodeProposal(txParams.SignedProp, txParams.Proposal, msg); err != nil {
+		fmt.Printf("h.setChaincodeProposal error")
 		return nil, err
 	}
 
@@ -1259,15 +1261,20 @@ func (h *Handler) Execute(txParams *ccprovider.TransactionParams, cccid *ccprovi
 	var ccresp *pb.ChaincodeMessage
 	select {
 	case ccresp = <-txctx.ResponseNotifier:
+		fmt.Printf("get <-txctx.ResponseNotifier")
 		// response is sent to user or calling chaincode. ChaincodeMessage_ERROR
 		// are typically treated as error
 	case <-time.After(timeout):
+		fmt.Printf("<-txctx.ResponseNotifier timeout")
 		err = errors.New("timeout expired while executing transaction")
 		ccName := cccid.Name + ":" + cccid.Version
 		h.Metrics.ExecuteTimeouts.With("chaincode", ccName).Add(1)
 	case <-h.streamDone():
+		fmt.Printf("<-txctx.ResponseNotifier streamDone")
 		err = errors.New("chaincode stream terminated")
 	}
+
+	println("it will return callChaincode.")
 
 	return ccresp, err
 }

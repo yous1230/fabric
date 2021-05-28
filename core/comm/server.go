@@ -8,6 +8,7 @@ package comm
 
 import (
 	"crypto/tls"
+	//"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -43,7 +44,6 @@ type GRPCServer struct {
 	clientRootCAs map[string]*x509.Certificate
 	// TLS configuration used by the grpc server
 	tls *TLSConfig
-	tlsConfig *tls.Config
 }
 
 // NewGRPCServer creates a new implementation of a GRPCServer given a
@@ -83,16 +83,21 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 		if secureConfig.Key != nil && secureConfig.Certificate != nil {
 			//load server public and private keys
 			cert, err := gcs.X509KeyPair(secureConfig.Certificate, secureConfig.Key)
+			fmt.Printf("cert is: %v", cert)
 			if err != nil {
+				fmt.Print("have err return")
 				return nil, err
 			}
+			fmt.Print("no err return")
 			grpcServer.serverCertificate.Store(cert)
 
 			//set up our TLS config
 			if len(secureConfig.CipherSuites) == 0 {
 				secureConfig.CipherSuites = DefaultTLSCipherSuites
 			}
+			fmt.Print("before getCert")
 			getCert := func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				fmt.Printf("getCert invoke")
 				cert := grpcServer.serverCertificate.Load().(tls.Certificate)
 				return &cert, nil
 			}
@@ -131,7 +136,7 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			// create credentials and add to server options
 			var creds credentials.TransportCredentials
 			if factory.GetDefaultAlgorithm() == bccsp.GMSM2 {
-				creds = NewTLS(grpcServer.tlsConfig, serverConfig.Logger)
+				creds = NewTLS(grpcServer.tls.config, serverConfig.Logger)
 			} else {
 				creds = NewServerTransportCredentials(grpcServer.tls, serverConfig.Logger)
 			}

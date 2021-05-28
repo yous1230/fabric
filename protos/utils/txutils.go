@@ -303,6 +303,7 @@ func CreateProposalResponseFailure(hdrbytes []byte, payl []byte, response *peer.
 // GetSignedProposal returns a signed proposal given a Proposal message and a
 // signing identity
 func GetSignedProposal(prop *peer.Proposal, signer msp.SigningIdentity) (*peer.SignedProposal, error) {
+	println("GetSignedProposal returns a signed proposal")
 	// check for nil argument
 	if prop == nil || signer == nil {
 		return nil, errors.New("nil arguments")

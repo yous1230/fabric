@@ -170,12 +170,12 @@ func (s *MSPMessageCryptoService) verifyHeaderWithMetadata(channelID string, hea
 		return fmt.Errorf("Could not acquire policy manager for channel %s", channelID)
 	}
 	// ok is true if it was the manager requested, or false if it is the default manager
-	mcsLogger.Debugf("Got policy manager for channel [%s] with flag [%t]", channelID, ok)
+	mcsLogger.Infof("Got policy manager for channel [%s] with flag [%t]", channelID, ok)
 
 	// Get block validation policy
 	policy, ok := cpm.GetPolicy(policies.BlockValidation)
 	// ok is true if it was the policy requested, or false if it is the default policy
-	mcsLogger.Debugf("Got block validation policy for channel [%s] with flag [%t]", channelID, ok)
+	mcsLogger.Infof("Got block validation policy for channel [%s] with flag [%t]", channelID, ok)
 
 	id2identities := s.id2IdentitiesFetcher.Id2Identities(channelID)
 	if id2identities == nil {
@@ -184,9 +184,10 @@ func (s *MSPMessageCryptoService) verifyHeaderWithMetadata(channelID string, hea
 
 	// - Prepare SignedData
 	signatureSet := []*pcommon.SignedData{}
+	mcsLogger.Infof("len(metadata.Signatures) is %d", len(metadata.Signatures))
 	for _, metadataSignature := range metadata.Signatures {
 		identity, ok := id2identities[metadataSignature.SignerId]
-		mcsLogger.Debugf("metadataSignature.SignerId is %d", metadataSignature.SignerId)
+		mcsLogger.Infof("metadataSignature.SignerId is %d", metadataSignature.SignerId)
 		if !ok {
 			return fmt.Errorf("identity for id %d was not found", metadataSignature.SignerId)
 		}

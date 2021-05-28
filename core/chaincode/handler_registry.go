@@ -115,6 +115,7 @@ func (r *HandlerRegistry) Failed(cname string, err error) {
 
 // Handler retrieves the handler for a chaincode instance.
 func (r *HandlerRegistry) Handler(cname string) *Handler {
+	println("Handler chaincode docker")
 	r.mutex.Lock()
 	h := r.handlers[cname]
 	r.mutex.Unlock()

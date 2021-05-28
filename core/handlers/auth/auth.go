@@ -21,6 +21,7 @@ type Filter interface {
 // ChainFilters chains the given auth filters in the order provided.
 // the last filter always forwards to the endorser
 func ChainFilters(endorser peer.EndorserServer, filters ...Filter) peer.EndorserServer {
+	println("core.endorser.Endorser is the final target.")
 	if len(filters) == 0 {
 		return endorser
 	}

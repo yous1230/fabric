@@ -587,6 +587,7 @@ func SmartBFTId2Identities(cid string) map[uint64][]byte {
 	proto.Unmarshal(oc.ConsensusMetadata(), m)
 
 	res := make(map[uint64][]byte)
+	peerLogger.Infof("len(m.Consenters) is %d", len(m.Consenters))
 	for _, consenter := range m.Consenters {
 		res[consenter.ConsenterId] = consenter.Identity
 	}

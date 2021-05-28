@@ -1,8 +1,8 @@
 # Copyright IBM Corp All Rights Reserved.
 # Copyright London Stock Exchange Group All Rights Reserved.
 #
-# SPDX-License-Identifier: Apache-2.0
 #
+# SPDX-License-Identifier: Apache-2.0
 # -------------------------------------------------------------
 # This makefile defines the following targets
 #
@@ -49,6 +49,7 @@ PREV_VERSION = 1.4.6
 CHAINTOOL_RELEASE=1.1.3
 BASEIMAGE_RELEASE=0.4.20
 
+#
 # Allow to build as a submodule setting the main project to
 # the PROJECT_NAME env variable, for example,
 # export PROJECT_NAME=hyperledger/fabric-test

@@ -112,6 +112,7 @@ func executeJoin(cf *ChannelCmdFactory) (err error) {
 	}
 
 	var proposalResp *pb.ProposalResponse
+	println("start from here8")
 	proposalResp, err = cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return ProposalFailedErr(err.Error())

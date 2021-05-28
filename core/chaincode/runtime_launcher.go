@@ -46,12 +46,17 @@ func (r *RuntimeLauncher) Launch(ccci *ccprovider.ChaincodeContainerInfo) error 
 		startFailCh = make(chan error, 1)
 		timeoutCh = time.NewTimer(r.StartupTimeout).C
 
+		println("launch alreadyStarted")
+
 		codePackage, err := r.getCodePackage(ccci)
 		if err != nil {
 			return err
 		}
 
 		go func() {
+			// 启动链码容器运行的下一个入口
+			println("launch ccc -----")
+
 			if err := r.Runtime.Start(ccci, codePackage); err != nil {
 				startFailCh <- errors.WithMessage(err, "error starting container")
 				return
@@ -60,6 +65,7 @@ func (r *RuntimeLauncher) Launch(ccci *ccprovider.ChaincodeContainerInfo) error 
 			if err != nil {
 				launchState.Notify(errors.Wrap(err, "failed to wait on container exit"))
 			}
+			println("7777777")
 			launchState.Notify(errors.Errorf("container exited with %d", exitCode))
 		}()
 	}
@@ -67,11 +73,14 @@ func (r *RuntimeLauncher) Launch(ccci *ccprovider.ChaincodeContainerInfo) error 
 	var err error
 	select {
 	case <-launchState.Done():
+		println("123")
 		err = errors.WithMessage(launchState.Err(), "chaincode registration failed")
 	case err = <-startFailCh:
+		println("456")
 		launchState.Notify(err)
 		r.Metrics.LaunchFailures.With("chaincode", cname).Add(1)
 	case <-timeoutCh:
+		println("789")
 		err = errors.Errorf("timeout expired while starting chaincode %s for transaction", cname)
 		launchState.Notify(err)
 		r.Metrics.LaunchTimeouts.With("chaincode", cname).Add(1)
@@ -79,10 +88,12 @@ func (r *RuntimeLauncher) Launch(ccci *ccprovider.ChaincodeContainerInfo) error 
 
 	success := true
 	if err != nil && !alreadyStarted {
+		println("err != nil, falied to Launch")
 		success = false
 		chaincodeLogger.Debugf("stopping due to error while launching: %+v", err)
 		defer r.Registry.Deregister(cname)
 		if err := r.Runtime.Stop(ccci); err != nil {
+			println("runtime stop error!")
 			chaincodeLogger.Debugf("stop failed: %+v", err)
 		}
 	}
@@ -93,6 +104,7 @@ func (r *RuntimeLauncher) Launch(ccci *ccprovider.ChaincodeContainerInfo) error 
 	).Observe(time.Since(startTime).Seconds())
 
 	chaincodeLogger.Debug("launch complete")
+	println("launch achieved and err ?= nil")
 	return err
 }
 

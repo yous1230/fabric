@@ -61,7 +61,11 @@ func NewVMController(vmProviders map[string]VMProvider) *VMController {
 
 func (vmc *VMController) newVM(typ string) VM {
 	v, ok := vmc.vmProviders[typ]
+	if v == nil {
+		println("get VM success")
+	}
 	if !ok {
+		println("Programming error: unsupported VM type: ", typ)
 		vmLogger.Panicf("Programming error: unsupported VM type: %s", typ)
 	}
 	return v.NewVM()
@@ -189,6 +193,7 @@ func (w WaitContainerReq) Do(v VM) error {
 	exited := w.Exited
 	go func() {
 		exitCode, err := v.Wait(w.CCID)
+		println("exitCode is ", exitCode)
 		exited(exitCode, err)
 	}()
 	return nil
@@ -200,9 +205,13 @@ func (w WaitContainerReq) GetCCID() ccintf.CCID {
 
 func (vmc *VMController) Process(vmtype string, req VMCReq) error {
 	v := vmc.newVM(vmtype)
+	println("new VM success")
 	ccid := req.GetCCID()
 	id := ccid.GetName()
 
+	println("ccid is ", id)
+
+	//给容器加锁
 	vmc.lockContainer(id)
 	defer vmc.unlockContainer(id)
 	return req.Do(v)

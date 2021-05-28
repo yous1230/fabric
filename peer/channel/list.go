@@ -73,7 +73,7 @@ func (cc *endorserClient) getChannels() ([]*pb.ChannelInfo, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Cannot create signed proposal, due to %s", err))
 	}
-
+	println("start from here9")
 	proposalResp, err := cc.cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Failed sending proposal, got %s", err))

@@ -82,6 +82,7 @@ func upgrade(cmd *cobra.Command, cf *ChaincodeCmdFactory) (*protcommon.Envelope,
 	}
 
 	// upgrade is currently only supported for one peer
+	println("start from here6")
 	proposalResponse, err := cf.EndorserClients[0].ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return nil, fmt.Errorf("error endorsing %s: %s", chainFuncName, err)

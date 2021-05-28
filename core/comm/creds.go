@@ -149,6 +149,7 @@ func (dtc *DynamicClientCredentials) latestConfig() *tls.Config {
 
 func (dtc *DynamicClientCredentials) ClientHandshake(ctx context.Context, authority string, rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {
 	return NewTLS(dtc.latestConfig(), nil).ClientHandshake(ctx, authority, rawConn)
+	//return credentials.NewTLS(dtc.latestConfig()).ClientHandshake(ctx, authority, rawConn)
 }
 
 func (dtc *DynamicClientCredentials) ServerHandshake(rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {

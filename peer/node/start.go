@@ -1042,5 +1042,6 @@ func (r *reset) ProcessProposal(ctx context.Context, signedProp *pb.SignedPropos
 	if r.reject {
 		return nil, errors.New("endorse requests are blocked while ledgers are being rebuilt")
 	}
+	println("start from here10")
 	return r.next.ProcessProposal(ctx, signedProp)
 }

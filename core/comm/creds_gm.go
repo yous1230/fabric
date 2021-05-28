@@ -8,6 +8,7 @@ package comm
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net"
 	"strings"
 	"unsafe"
@@ -60,6 +61,11 @@ func (c *gmCreds) ClientHandshake(ctx context.Context, addr string, rawConn net.
 
 func (c *gmCreds) ServerHandshake(rawConn net.Conn) (net.Conn, credentials.AuthInfo, error) {
 	conn := gcs.Server(rawConn, c.config)
+	fmt.Printf("c.config.Certificates = %s", c.config.Certificates)
+	fmt.Printf("c.config.getCert = %s", c.config.GetCertificate)
+	//cert, _ := c.config.GetCertificate()
+	//fmt.Printf("c.config.getCert len = %d", len(cert))
+
 	if err := conn.Handshake(); err != nil {
 		if c.logger != nil {
 			c.logger.With("remote address",

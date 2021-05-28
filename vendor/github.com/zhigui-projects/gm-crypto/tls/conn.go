@@ -1313,8 +1313,10 @@ func (c *Conn) Handshake() error {
 	}
 
 	if c.isClient {
+		fmt.Print("invoke c.clientHandshake")
 		c.handshakeErr = c.clientHandshake()
 	} else {
+		fmt.Print("invoke c.serverHandshake")
 		c.handshakeErr = c.serverHandshake()
 	}
 	if c.handshakeErr == nil {

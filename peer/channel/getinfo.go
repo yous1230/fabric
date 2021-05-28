@@ -60,7 +60,7 @@ func (cc *endorserClient) getBlockChainInfo() (*cb.BlockchainInfo, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "cannot create signed proposal")
 	}
-
+	println("start from here7")
 	proposalResp, err := cc.cf.EndorserClient.ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed sending proposal")

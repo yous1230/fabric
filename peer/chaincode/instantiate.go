@@ -25,6 +25,7 @@ const instantiateDesc = "Deploy the specified chaincode to the network."
 
 // instantiateCmd returns the cobra command for Chaincode Deploy
 func instantiateCmd(cf *ChaincodeCmdFactory) *cobra.Command {
+	println("instantiateCmd enter ---------")
 	chaincodeInstantiateCmd = &cobra.Command{
 		Use:       instantiateCmdName,
 		Short:     fmt.Sprint(instantiateDesc),
@@ -55,6 +56,7 @@ func instantiateCmd(cf *ChaincodeCmdFactory) *cobra.Command {
 
 //instantiate the command via Endorser
 func instantiate(cmd *cobra.Command, cf *ChaincodeCmdFactory) (*protcommon.Envelope, error) {
+	println("start instantiate -----")
 	spec, err := getChaincodeSpec(cmd)
 	if err != nil {
 		return nil, err
@@ -77,11 +79,13 @@ func instantiate(cmd *cobra.Command, cf *ChaincodeCmdFactory) (*protcommon.Envel
 
 	var signedProp *pb.SignedProposal
 	signedProp, err = utils.GetSignedProposal(prop, cf.Signer)
+	println("signedProp is", signedProp.Signature)
 	if err != nil {
 		return nil, fmt.Errorf("error creating signed proposal  %s: %s", chainFuncName, err)
 	}
 
 	// instantiate is currently only supported for one peer
+	println("start from here3")
 	proposalResponse, err := cf.EndorserClients[0].ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return nil, fmt.Errorf("error endorsing %s: %s", chainFuncName, err)
@@ -104,6 +108,7 @@ func instantiate(cmd *cobra.Command, cf *ChaincodeCmdFactory) (*protcommon.Envel
 // (hash) is printed to STDOUT for use by subsequent chaincode-related CLI
 // commands.
 func chaincodeDeploy(cmd *cobra.Command, args []string, cf *ChaincodeCmdFactory) error {
+	println("chaincodeDeploy enter ----------")
 	if channelID == "" {
 		return errors.New("The required parameter 'channelID' is empty. Rerun the command with -C flag")
 	}
@@ -118,6 +123,7 @@ func chaincodeDeploy(cmd *cobra.Command, args []string, cf *ChaincodeCmdFactory)
 		}
 	}
 	defer cf.BroadcastClient.Close()
+	println("it will start instantiate.")
 	env, err := instantiate(cmd, cf)
 	if err != nil {
 		return err

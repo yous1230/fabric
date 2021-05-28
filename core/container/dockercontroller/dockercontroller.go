@@ -230,11 +230,13 @@ func (vm *DockerVM) deployImage(client dockerClient, ccid ccintf.CCID, reader io
 
 // Start starts a container using a previously created docker image
 func (vm *DockerVM) Start(ccid ccintf.CCID, args, env []string, filesToUpload map[string][]byte, builder container.Builder) error {
+	println("Where the container is actually created")
 	imageName, err := vm.GetVMNameForDocker(ccid)
 	if err != nil {
 		return err
 	}
 
+	// 将容器的输出直接到控制台，方便开发调试
 	attachStdout := viper.GetBool("vm.docker.attachStdout")
 	containerName := vm.GetVMName(ccid)
 	logger := dockerLogger.With("imageName", imageName, "containerName", containerName)
@@ -248,7 +250,9 @@ func (vm *DockerVM) Start(ccid ccintf.CCID, args, env []string, filesToUpload ma
 	vm.stopInternal(client, containerName, 0, false, false)
 
 	err = vm.createContainer(client, imageName, containerName, args, env, attachStdout)
+	// 保证是第一次部署，当前环境没有该镜像
 	if err == docker.ErrNoSuchImage {
+		println("Start createContainer")
 		reader, err := builder.Build()
 		if err != nil {
 			return errors.Wrapf(err, "failed to generate Dockerfile to build %s", containerName)
@@ -277,6 +281,9 @@ func (vm *DockerVM) Start(ccid ccintf.CCID, args, env []string, filesToUpload ma
 
 	// upload specified files to the container before starting it
 	// this can be used for configurations such as TLS key and certs
+
+	println("upload TLS key and certs")
+
 	if len(filesToUpload) != 0 {
 		// the docker upload API takes a tar file, so we need to first
 		// consolidate the file entries to a tar
@@ -313,6 +320,7 @@ func (vm *DockerVM) Start(ccid ccintf.CCID, args, env []string, filesToUpload ma
 	}
 
 	dockerLogger.Debugf("Started container %s", containerName)
+	println("error is nil --------")
 	return nil
 }
 
@@ -390,13 +398,14 @@ func (vm *DockerVM) Stop(ccid ccintf.CCID, timeout uint, dontkill bool, dontremo
 
 // Wait blocks until the container stops and returns the exit code of the container.
 func (vm *DockerVM) Wait(ccid ccintf.CCID) (int, error) {
+	println("44444444")
 	client, err := vm.getClientFnc()
 	if err != nil {
 		dockerLogger.Debugf("stop - cannot create client %s", err)
 		return 0, err
 	}
+	println("55555555")
 	id := vm.ccidToContainerID(ccid)
-
 	return client.WaitContainer(id)
 }
 

@@ -92,6 +92,7 @@ func getChaincodes(cmd *cobra.Command, cf *ChaincodeCmdFactory) error {
 	}
 
 	// list is currently only supported for one peer
+	println("start from here5")
 	proposalResponse, err := cf.EndorserClients[0].ProcessProposal(context.Background(), signedProp)
 	if err != nil {
 		return errors.Errorf("Error endorsing %s: %s", chainFuncName, err)
