@@ -63,6 +63,7 @@ BCCSP:
 BCCSP:
     default: SW
     SW:
+		Algorithm: ECDSA
         Hash: SHA3
         Security: 256`
 	}

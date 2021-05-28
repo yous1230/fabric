@@ -75,6 +75,10 @@ func (k *nymSecretKey) PublicKey() (bccsp.Key, error) {
 	return &nymPublicKey{ski: ski, pk: k.pk}, nil
 }
 
+func (k *nymSecretKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("not supported")
+}
+
 type nymPublicKey struct {
 	// SKI of this key
 	ski []byte
@@ -106,6 +110,10 @@ func (*nymPublicKey) Private() bool {
 
 func (k *nymPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *nymPublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [nymPublicKey]")
 }
 
 // NymKeyDerivation derives nyms

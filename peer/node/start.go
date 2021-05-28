@@ -889,6 +889,7 @@ func initGossipService(policyMgr policies.ChannelPolicyManagerGetter, metricsPro
 
 	messageCryptoService := peergossip.NewMCS(
 		policyMgr,
+		&peer.IdentityFethcer{},
 		localmsp.NewSigner(),
 		mgmt.NewDeserializersManager(),
 	)

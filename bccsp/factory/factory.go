@@ -34,6 +34,9 @@ var (
 	// BCCSP Factories
 	bccspMap map[string]bccsp.BCCSP
 
+	// Default Algorithm
+	defaultAlgorithm string
+
 	// factories' Sync on Initialization
 	factoriesInitOnce sync.Once
 	bootBCCSPInitOnce sync.Once
@@ -90,4 +93,8 @@ func initBCCSP(f BCCSPFactory, config *FactoryOpts) error {
 	logger.Debugf("Initialize BCCSP [%s]", f.Name())
 	bccspMap[f.Name()] = csp
 	return nil
+}
+
+func GetDefaultAlgorithm() string {
+	return defaultAlgorithm
 }

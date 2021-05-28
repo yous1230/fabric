@@ -27,6 +27,13 @@ const (
 	RetryTimeout = time.Second * 10
 )
 
+// InactiveChainRegistry registers chains that are inactive
+type InactiveChainRegistry interface {
+	// TrackChain tracks a chain with the given name, and calls the given callback
+	// when this chain should be created.
+	TrackChain(chainName string, genesisBlock *common.Block, createChain CreateChainCallback)
+}
+
 // ChannelPredicate accepts channels according to their names.
 type ChannelPredicate func(channelName string) bool
 
@@ -390,7 +397,7 @@ func BlockPullerFromConfigBlock(conf PullerConfig, block *common.Block, verifier
 			if verifier == nil {
 				return errors.Errorf("couldn't acquire verifier for channel %s", channel)
 			}
-			return VerifyBlocks(blocks, verifier)
+			return VerifyBlocksBFT(blocks, verifier)
 		},
 		MaxTotalBufferBytes: conf.MaxTotalBufferBytes,
 		Endpoints:           endpoints,
@@ -406,6 +413,10 @@ type NoopBlockVerifier struct{}
 
 // VerifyBlockSignature accepts all signatures over blocks.
 func (*NoopBlockVerifier) VerifyBlockSignature(sd []*common.SignedData, config *common.ConfigEnvelope) error {
+	return nil
+}
+
+func (*NoopBlockVerifier) Id2Identity(envelope *common.ConfigEnvelope) map[uint64][]byte {
 	return nil
 }
 

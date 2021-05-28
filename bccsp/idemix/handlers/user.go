@@ -54,6 +54,10 @@ func (k *userSecretKey) PublicKey() (bccsp.Key, error) {
 	return nil, errors.New("cannot call this method on a symmetric key")
 }
 
+func (k *userSecretKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("cannot call this method on a symmetric key")
+}
+
 type UserKeyGen struct {
 	// Exportable is a flag to allow an issuer secret key to be marked as Exportable.
 	// If a secret key is marked as Exportable, its Bytes method will return the key's byte representation.

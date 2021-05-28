@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger/fabric/common/attrmgr"
 	"github.com/hyperledger/fabric/protos/msp"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // GetID returns the ID associated with the invoking identity.  This ID
@@ -153,7 +154,7 @@ func (c *clientIdentityImpl) init() error {
 	if block == nil {
 		return errors.New("Expecting a PEM-encoded X509 certificate; PEM block not found")
 	}
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := gcx.GetX509().ParseCertificate(block.Bytes)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse certificate")
 	}

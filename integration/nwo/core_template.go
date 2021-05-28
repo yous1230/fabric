@@ -59,7 +59,7 @@ peer:
       leaderAliveThreshold: 10s
       leaderElectionDuration: 5s
     pvtData:
-      pullRetryThreshold: 60s
+      pullRetryThreshold: 15s
       transientstoreMaxBlockRetention: 1000
       pushAckTimeout: 3s
       reconcileBatchSize: 10
@@ -98,6 +98,12 @@ peer:
   localMspId: {{ (.Organization Peer.Organization).MSPID }}
   deliveryclient:
     reconnectTotalTimeThreshold: 3600s
+    bft:
+  {{- if Peer.BFTDeliveryClient }}
+      enabled: true
+  {{- else }}
+      enabled: false
+  {{- end }}
   localMspType: bccsp
   profile:
     enabled:     false
@@ -154,7 +160,7 @@ chaincode:
   car:
     runtime: $(BASE_DOCKER_NS)/fabric-baseos:$(ARCH)-$(BASE_VERSION)
   java:
-    runtime: $(DOCKER_NS)/fabric-javaenv:$(ARCH)-$(PROJECT_VERSION)
+    runtime: $(DOCKER_NS)/fabric-javaenv:$(TWO_DIGIT_VERSION)
   node:
       runtime: $(BASE_DOCKER_NS)/fabric-baseimage:$(ARCH)-$(BASE_VERSION)
   startuptimeout: 300s

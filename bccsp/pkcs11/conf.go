@@ -74,6 +74,7 @@ func (conf *config) setSecurityLevelSHA3(level int) (err error) {
 // PKCS11Opts contains options for the P11Factory
 type PKCS11Opts struct {
 	// Default algorithms when not specified (Deprecated?)
+	Algorithm  string `mapstructure:"algorithm" json:"algorithm"`
 	SecLevel   int    `mapstructure:"security" json:"security"`
 	HashFamily string `mapstructure:"hash" json:"hash"`
 
@@ -88,6 +89,7 @@ type PKCS11Opts struct {
 	Pin        string `mapstructure:"pin" json:"pin"`
 	SoftVerify bool   `mapstructure:"softwareverify,omitempty" json:"softwareverify,omitempty"`
 	Immutable  bool   `mapstructure:"immutable,omitempty" json:"immutable,omitempty"`
+	AltId      string `mapstructure:"altid" json:"altid"`
 }
 
 // FileKeystoreOpts currently only ECDSA operations go to PKCS11, need a keystore still

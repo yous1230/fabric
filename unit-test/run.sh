@@ -5,11 +5,30 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
+type=$1
+
+export GOROOT=$(go env GOROOT)
+export GOPATH=$(go env GOPATH)
+
+make docker
+
+echo "Running $type tests"
+
+
+
+echo "Pulling hyperledger/fabric-couchdb"
+docker pull hyperledger/fabric-couchdb:latest
+
+
+echo "Running Fabric unit tests"
+(for i in $(seq 1 60); do echo $i; sleep 120; done) &
+
 set -e
 
 # regexes for packages to exclude from unit test
 excluded_packages=(
     "/integration(/|$)"
+    "/orderer/"
 )
 
 # regexes for packages that must be run serially
@@ -68,7 +87,7 @@ serial_test_packages() {
 # "go test" the provided packages. Packages that are not present in the serial package list
 # will be tested in parallel
 run_tests() {
-    local flags="-cover"
+    local flags="-gcflags=all=-d=checkptr=0"
     if [ -n "${VERBOSE}" ]; then
         flags="${flags} -v"
     fi
@@ -84,12 +103,16 @@ run_tests() {
     time {
         local parallel=$(parallel_test_packages "$@")
         if [ -n "${parallel}" ]; then
-            go test ${flags} ${race_flags} -tags "$GO_TAGS" ${parallel[@]} -short -timeout=20m
+	    if [[ "$type" == "parallel" ]]; then
+	            go test ${flags} ${race_flags} -tags "$GO_TAGS" ${parallel[@]} -short -timeout=20m
+	    fi
         fi
 
         local serial=$(serial_test_packages "$@") # race is disabled as well
         if [ -n "${serial}" ]; then
-            go test ${flags} -tags "$GO_TAGS" ${serial[@]} -short -p 1 -timeout=20m
+	    if [[ "$type" == "serial" ]]; then 
+	            go test ${flags} -tags "$GO_TAGS" ${serial[@]} -short -p 1 -timeout=20m
+	    fi
         fi
     }
 }
@@ -137,12 +160,12 @@ main() {
         echo "mode: set" > profile.cov
         run_tests_with_coverage "${packages[@]}"
         GO_TAGS="${GO_TAGS} pluginsenabled" run_tests_with_coverage "${plugin_packages[@]}"
-        GO_TAGS="${GO_TAGS} pkcs11" run_tests_with_coverage "${pkcs11_packages[@]}"
+        #GO_TAGS="${GO_TAGS} pkcs11" run_tests_with_coverage "${pkcs11_packages[@]}"
         gocov convert profile.cov | gocov-xml > report.xml
     else
         run_tests "${packages[@]}"
         GO_TAGS="${GO_TAGS} pluginsenabled" run_tests "${plugin_packages[@]}"
-        GO_TAGS="${GO_TAGS} pkcs11" run_tests "${pkcs11_packages[@]}"
+        #GO_TAGS="${GO_TAGS} pkcs11" run_tests "${pkcs11_packages[@]}"
     fi
 }
 

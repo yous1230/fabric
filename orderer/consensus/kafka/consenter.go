@@ -10,6 +10,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/hyperledger/fabric-lib-go/healthz"
 	"github.com/hyperledger/fabric/common/metrics"
+	"github.com/hyperledger/fabric/orderer/common/cluster"
 	"github.com/hyperledger/fabric/orderer/common/localconfig"
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/inactive"
@@ -26,7 +27,8 @@ type healthChecker interface {
 }
 
 // New creates a Kafka-based consenter. Called by orderer's main.go.
-func New(config localconfig.Kafka, mp metrics.Provider, healthChecker healthChecker, icr InactiveChainRegistry, mkChain func(string)) (consensus.Consenter, *Metrics) {
+func New(config localconfig.Kafka, mp metrics.Provider, healthChecker healthChecker, icr cluster.InactiveChainRegistry, mkChain func(string)) (consensus.Consenter, *Metrics) {
+
 	if config.Verbose {
 		logging.SetLevel(logging.DEBUG, "orderer.consensus.kafka.sarama")
 	}
@@ -75,7 +77,7 @@ type consenterImpl struct {
 	topicDetailVal        *sarama.TopicDetail
 	healthChecker         healthChecker
 	metrics               *Metrics
-	inactiveChainRegistry InactiveChainRegistry
+	inactiveChainRegistry cluster.InactiveChainRegistry
 }
 
 // HandleChain creates/returns a reference to a consensus.Chain object for the

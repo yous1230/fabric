@@ -125,6 +125,7 @@ type MockKey struct {
 	PK         bccsp.Key
 	PKErr      error
 	Pvt        bool
+	PvK        bccsp.Key
 }
 
 func (m *MockKey) Bytes() ([]byte, error) {
@@ -145,6 +146,10 @@ func (m *MockKey) Private() bool {
 
 func (m *MockKey) PublicKey() (bccsp.Key, error) {
 	return m.PK, m.PKErr
+}
+
+func (m *MockKey) PrivateKey() (interface{}, error) {
+	return m.PvK, nil
 }
 
 type SignerOpts struct {

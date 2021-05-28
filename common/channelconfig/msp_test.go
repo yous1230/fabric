@@ -9,8 +9,6 @@ package channelconfig
 import (
 	"testing"
 
-	"github.com/hyperledger/fabric/bccsp"
-
 	"github.com/hyperledger/fabric/core/config/configtest"
 	"github.com/hyperledger/fabric/msp"
 	mspprotos "github.com/hyperledger/fabric/protos/msp"
@@ -20,7 +18,7 @@ import (
 func TestMSPConfigManager(t *testing.T) {
 	mspDir, err := configtest.GetDevMspDir()
 	assert.NoError(t, err)
-	conf, err := msp.GetLocalMspConfig(mspDir, nil, "SampleOrg", bccsp.SHA2, bccsp.SHA256)
+	conf, err := msp.GetLocalMspConfig(mspDir, nil, "SampleOrg")
 	assert.NoError(t, err)
 
 	// test success:

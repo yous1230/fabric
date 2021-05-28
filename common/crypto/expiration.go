@@ -7,13 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package crypto
 
 import (
-	"crypto/x509"
 	"encoding/pem"
 	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/protos/msp"
-	x "github.com/zhigui-projects/x509"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 // ExpiresAt returns when the given identity expires, or a zero time.Time
@@ -33,15 +32,12 @@ func certExpirationTime(pemBytes []byte) time.Time {
 		// If the identity isn't a PEM block, we make no decisions about the expiration time
 		return time.Time{}
 	}
-	if cert, err := x509.ParseCertificate(bl.Bytes); err == nil {
-		return cert.NotAfter
-	}
 
-	if cert, err := x.X509(x.SM2).ParseCertificate(bl.Bytes); err == nil {
-		return cert.NotAfter
+	cert, err := gcx.GetX509().ParseCertificate(bl.Bytes)
+	if err != nil {
+		return time.Time{}
 	}
-
-	return time.Time{}
+	return cert.NotAfter
 }
 
 // WarnFunc notifies a warning happened with the given format, and can be replaced with Warnf of a logger.

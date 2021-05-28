@@ -76,6 +76,13 @@ func (*mockTransientStore) PurgeByTxids(txids []string) error {
 	panic("implement me")
 }
 
+type id2IdentitiesFetcherMock struct {
+}
+
+func (*id2IdentitiesFetcherMock) Id2Identities(cid string) map[uint64][]byte {
+	return nil
+}
+
 func TestInitGossipService(t *testing.T) {
 	// Test whenever gossip service is indeed singleton
 	grpcServer := grpc.NewServer()
@@ -89,7 +96,7 @@ func TestInitGossipService(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func() {
 			defer wg.Done()
-			messageCryptoService := peergossip.NewMCS(&mocks.ChannelPolicyManagerGetter{}, localmsp.NewSigner(), mgmt.NewDeserializersManager())
+			messageCryptoService := peergossip.NewMCS(&mocks.ChannelPolicyManagerGetter{}, &id2IdentitiesFetcherMock{}, localmsp.NewSigner(), mgmt.NewDeserializersManager())
 			secAdv := peergossip.NewSecurityAdvisor(mgmt.NewDeserializersManager())
 			err := InitGossipService(identity, &disabled.Provider{}, endpoint, grpcServer, nil,
 				messageCryptoService, secAdv, nil, false)
@@ -805,6 +812,10 @@ func (*naiveCryptoService) GetPKIidOfCert(peerIdentity api.PeerIdentityType) gos
 // VerifyBlock returns nil if the block is properly signed,
 // else returns error
 func (*naiveCryptoService) VerifyBlock(chainID gossipCommon.ChainID, seqNum uint64, signedBlock []byte) error {
+	return nil
+}
+
+func (*naiveCryptoService) VerifyHeader(chainID string, signedBlock *common.Block) error {
 	return nil
 }
 

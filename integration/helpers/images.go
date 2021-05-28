@@ -22,14 +22,23 @@ func AssertImagesExist(imageNames ...string) {
 	Expect(err).NotTo(HaveOccurred())
 
 	for _, imageName := range imageNames {
-		images, err := dockerClient.ListImages(docker.ListImagesOptions{
-			Filter: imageName,
-		})
-		ExpectWithOffset(1, err).NotTo(HaveOccurred())
+		// images, err := dockerClient.ListImages(docker.ListImagesOptions{
+		// 	All: false,
+		// 	Filter: imageName,
+		// })
+		// fmt.Println("1:")
+		// fmt.Println(images)
+		// ExpectWithOffset(1, err).NotTo(HaveOccurred())
 
-		if len(images) != 1 {
+		// if len(images) != 1 {
+		// 	Fail(fmt.Sprintf("missing required image: %s", imageName), 1)
+		// }
+		image, err := dockerClient.InspectImage(imageName)
+		fmt.Println(image)
+		Expect(err).NotTo(HaveOccurred())
+		if image == nil {
 			Fail(fmt.Sprintf("missing required image: %s", imageName), 1)
-		}
+		}		
 	}
 }
 

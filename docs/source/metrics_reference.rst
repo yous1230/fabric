@@ -324,6 +324,16 @@ The following peer metrics are exported for consumption by Prometheus.
 |                                                     |           |                                                            | channel            |
 |                                                     |           |                                                            | chaincode          |
 +-----------------------------------------------------+-----------+------------------------------------------------------------+--------------------+
+| consensus_smartbft_cluster_size                     | gauge     | Number of nodes in this channel.                           | channel            |
++-----------------------------------------------------+-----------+------------------------------------------------------------+--------------------+
+| consensus_smartbft_committed_block_number           | gauge     | The number of the latest committed block.                  | channel            |
++-----------------------------------------------------+-----------+------------------------------------------------------------+--------------------+
+| consensus_smartbft_is_leader                        | gauge     | The leadership status of the current node according to the | channel            |
+|                                                     |           | latest committed block: 1 if it is the leader else 0.      |                    |
++-----------------------------------------------------+-----------+------------------------------------------------------------+--------------------+
+| consensus_smartbft_leader_id                        | gauge     | The id of the current leader according to the latest       | channel            |
+|                                                     |           | committed block.                                           |                    |
++-----------------------------------------------------+-----------+------------------------------------------------------------+--------------------+
 | couchdb_processing_time                             | histogram | Time taken in seconds for the function to complete request | database           |
 |                                                     |           | to CouchDB                                                 | function_name      |
 |                                                     |           |                                                            | result             |
@@ -497,6 +507,79 @@ associated with the metric.
 | chaincode.shim_requests_completed.%{type}.%{channel}.%{chaincode}.%{success}            | counter   | The number of chaincode shim requests completed.           |
 +-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
 | chaincode.shim_requests_received.%{type}.%{channel}.%{chaincode}                        | counter   | The number of chaincode shim requests received.            |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.egress_queue_capacity.%{host}.%{msg_type}.%{channel}                       | gauge     | Capacity of the egress queue.                              |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.egress_queue_length.%{host}.%{msg_type}.%{channel}                         | gauge     | Length of the egress queue.                                |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.egress_queue_workers.%{channel}                                            | gauge     | Count of egress queue workers.                             |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.egress_stream_count.%{channel}                                             | gauge     | Count of streams to other nodes.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.egress_tls_connection_count                                                | gauge     | Count of TLS connections to other nodes.                   |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.ingress_stream_count                                                       | gauge     | Count of streams from other nodes.                         |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.msg_dropped_count.%{host}.%{channel}                                       | counter   | Count of messages dropped.                                 |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| cluster.comm.msg_send_time.%{host}.%{channel}                                           | histogram | The time it takes to send a message in seconds.            |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.cluster_size.%{channel}                                              | gauge     | Number of nodes in this channel.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.committed_block_number.%{channel}                                    | gauge     | The block number of the latest block committed.            |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.config_proposals_received.%{channel}                                 | counter   | The total number of proposals received for config type     |
+|                                                                                         |           | transactions.                                              |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.data_persist_duration.%{channel}                                     | histogram | The time taken for etcd/raft data to be persisted in       |
+|                                                                                         |           | storage (in seconds).                                      |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.is_leader.%{channel}                                                 | gauge     | The leadership status of the current node: 1 if it is the  |
+|                                                                                         |           | leader else 0.                                             |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.leader_changes.%{channel}                                            | counter   | The number of leader changes since process start.          |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.normal_proposals_received.%{channel}                                 | counter   | The total number of proposals received for normal type     |
+|                                                                                         |           | transactions.                                              |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.proposal_failures.%{channel}                                         | counter   | The number of proposal failures.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.etcdraft.snapshot_block_number.%{channel}                                     | gauge     | The block number of the latest snapshot.                   |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.batch_size.%{topic}                                                     | gauge     | The mean batch size in bytes sent to topics.               |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.compression_ratio.%{topic}                                              | gauge     | The mean compression ratio (as percentage) for topics.     |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.incoming_byte_rate.%{broker_id}                                         | gauge     | Bytes/second read off brokers.                             |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.last_offset_persisted.%{channel}                                        | gauge     | The offset specified in the block metadata of the most     |
+|                                                                                         |           | recently committed block.                                  |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.outgoing_byte_rate.%{broker_id}                                         | gauge     | Bytes/second written to brokers.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.record_send_rate.%{topic}                                               | gauge     | The number of records per second sent to topics.           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.records_per_request.%{topic}                                            | gauge     | The mean number of records sent per request to topics.     |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.request_latency.%{broker_id}                                            | gauge     | The mean request latency in ms to brokers.                 |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.request_rate.%{broker_id}                                               | gauge     | Requests/second sent to brokers.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.request_size.%{broker_id}                                               | gauge     | The mean request size in bytes to brokers.                 |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.response_rate.%{broker_id}                                              | gauge     | Requests/second sent to brokers.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.kafka.response_size.%{broker_id}                                              | gauge     | The mean response size in bytes from brokers.              |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.smartbft.cluster_size.%{channel}                                              | gauge     | Number of nodes in this channel.                           |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.smartbft.committed_block_number.%{channel}                                    | gauge     | The number of the latest committed block.                  |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.smartbft.is_leader.%{channel}                                                 | gauge     | The leadership status of the current node according to the |
+|                                                                                         |           | latest committed block: 1 if it is the leader else 0.      |
++-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
+| consensus.smartbft.leader_id.%{channel}                                                 | gauge     | The id of the current leader according to the latest       |
+|                                                                                         |           | committed block.                                           |
 +-----------------------------------------------------------------------------------------+-----------+------------------------------------------------------------+
 | couchdb.processing_time.%{database}.%{function_name}.%{result}                          | histogram | Time taken in seconds for the function to complete request |
 |                                                                                         |           | to CouchDB                                                 |

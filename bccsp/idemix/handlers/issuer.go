@@ -52,6 +52,10 @@ func (k *issuerSecretKey) PublicKey() (bccsp.Key, error) {
 	return &issuerPublicKey{k.sk.Public()}, nil
 }
 
+func (k *issuerSecretKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("not supported")
+}
+
 // issuerPublicKey contains the issuer public key
 // and implements the bccsp.Key interface
 type issuerPublicKey struct {
@@ -80,6 +84,10 @@ func (*issuerPublicKey) Private() bool {
 
 func (k *issuerPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (*issuerPublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [issuerPublicKey]")
 }
 
 // IssuerKeyGen generates issuer secret keys.

@@ -70,6 +70,10 @@ func (k *revocationSecretKey) PublicKey() (bccsp.Key, error) {
 	return &revocationPublicKey{&k.privKey.PublicKey}, nil
 }
 
+func (k *revocationSecretKey) PrivateKey() (interface{}, error) {
+	return k.privKey, nil
+}
+
 type revocationPublicKey struct {
 	pubKey *ecdsa.PublicKey
 }
@@ -115,6 +119,10 @@ func (k *revocationPublicKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *revocationPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *revocationPublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [revocationPublicKey]")
 }
 
 // RevocationKeyGen generates revocation secret keys.

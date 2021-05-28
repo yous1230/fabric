@@ -33,7 +33,7 @@ type ecdsaPrivateKey struct {
 // Bytes converts this key to its byte representation,
 // if this operation is allowed.
 func (k *ecdsaPrivateKey) Bytes() ([]byte, error) {
-	return nil, errors.New("Not supported.")
+	return x509.MarshalPKCS8PrivateKey(k.privKey)
 }
 
 // SKI returns the subject key identifier of this key.
@@ -67,6 +67,10 @@ func (k *ecdsaPrivateKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *ecdsaPrivateKey) PublicKey() (bccsp.Key, error) {
 	return &ecdsaPublicKey{&k.privKey.PublicKey}, nil
+}
+
+func (k *ecdsaPrivateKey) PrivateKey() (interface{}, error) {
+	return k.privKey, nil
 }
 
 type ecdsaPublicKey struct {
@@ -114,4 +118,8 @@ func (k *ecdsaPublicKey) Private() bool {
 // This method returns an error in symmetric key schemes.
 func (k *ecdsaPublicKey) PublicKey() (bccsp.Key, error) {
 	return k, nil
+}
+
+func (k *ecdsaPublicKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("This is a public key [ecdsaPublicKey]")
 }

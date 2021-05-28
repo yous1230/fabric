@@ -1,7 +1,7 @@
 // +build !pkcs11
 
 /*
-Copyright IBM Corp. 2017 All Rights Reserved.
+Copyright IBM Corp. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +18,14 @@ limitations under the License.
 package factory
 
 import (
+	"strconv"
+
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
+
+const pkcs11Enabled = false
 
 // FactoryOpts holds configuration information used to initialize factory implementations
 type FactoryOpts struct {
@@ -35,48 +40,54 @@ type FactoryOpts struct {
 // Error is returned only if defaultBCCSP cannot be found
 func InitFactories(config *FactoryOpts) error {
 	factoriesInitOnce.Do(func() {
-		// Take some precautions on default opts
-		if config == nil {
-			config = GetDefaultOpts()
-		}
-
-		if config.ProviderName == "" {
-			config.ProviderName = "SW"
-		}
-
-		if config.SwOpts == nil {
-			config.SwOpts = GetDefaultOpts().SwOpts
-		}
-
-		// Initialize factories map
-		bccspMap = make(map[string]bccsp.BCCSP)
-
-		// Software-Based BCCSP
-		if config.SwOpts != nil {
-			f := &SWFactory{}
-			err := initBCCSP(f, config)
-			if err != nil {
-				factoriesInitError = errors.Wrapf(err, "Failed initializing BCCSP.")
-			}
-		}
-
-		// BCCSP Plugin
-		if config.PluginOpts != nil {
-			f := &PluginFactory{}
-			err := initBCCSP(f, config)
-			if err != nil {
-				factoriesInitError = errors.Wrapf(err, "Failed initializing PKCS11.BCCSP %s", factoriesInitError)
-			}
-		}
-
-		var ok bool
-		defaultBCCSP, ok = bccspMap[config.ProviderName]
-		if !ok {
-			factoriesInitError = errors.Errorf("%s\nCould not find default `%s` BCCSP", factoriesInitError, config.ProviderName)
-		}
+		factoriesInitError = initFactories(config)
 	})
 
 	return factoriesInitError
+}
+
+func initFactories(config *FactoryOpts) error {
+	// Take some precautions on default opts
+	if config == nil {
+		config = GetDefaultOpts()
+	}
+
+	if config.ProviderName == "" {
+		config.ProviderName = "SW"
+	}
+
+	if config.SwOpts == nil {
+		config.SwOpts = GetDefaultOpts().SwOpts
+	}
+
+	// Initialize factories map
+	bccspMap = make(map[string]bccsp.BCCSP)
+
+	// Software-Based BCCSP
+	if config.ProviderName == "SW" && config.SwOpts != nil {
+		f := &SWFactory{}
+		err := initBCCSP(f, config)
+		if err != nil {
+			return errors.Wrapf(err, "Failed initializing BCCSP")
+		}
+	}
+
+	// BCCSP Plugin
+	if config.ProviderName == "PLUGIN" && config.PluginOpts != nil {
+		f := &PluginFactory{}
+		err := initBCCSP(f, config)
+		if err != nil {
+			return errors.Wrapf(err, "Failed initializing PLUGIN.BCCSP")
+		}
+	}
+
+	var ok bool
+	defaultBCCSP, ok = bccspMap[config.ProviderName]
+	if !ok {
+		return errors.Errorf("Could not find default `%s` BCCSP", config.ProviderName)
+	}
+	gcx.InitX509(defaultAlgorithm)
+	return nil
 }
 
 // GetBCCSPFromOpts returns a BCCSP created according to the options passed in input.
@@ -96,4 +107,36 @@ func GetBCCSPFromOpts(config *FactoryOpts) (bccsp.BCCSP, error) {
 		return nil, errors.Wrapf(err, "Could not initialize BCCSP %s", f.Name())
 	}
 	return csp, nil
+}
+
+func GetHashOptFromOpts(config *FactoryOpts) (string, bccsp.HashOpts, error) {
+	switch config.ProviderName {
+	case "SW":
+		if opt, err := bccsp.GetHashOptFromFamily(config.SwOpts.SecLevel, config.SwOpts.HashFamily); err != nil {
+			return "", nil, err
+		} else {
+			return config.SwOpts.HashFamily, opt, nil
+		}
+	case "PLUGIN":
+		secLv := config.PluginOpts.Config["SecLevel"]
+		if secLv == nil {
+			return "", nil, errors.Errorf("bccsp plugin provider [%s] hash seclevel not set", config.ProviderName)
+		}
+		secLevel, err := strconv.Atoi(secLv.(string))
+		if err != nil {
+			return "", nil, err
+		}
+		hf := config.PluginOpts.Config["HashFamily"]
+		if hf == nil {
+			return "", nil, errors.Errorf("bccsp plugin provider [%s] hash family not set", config.ProviderName)
+		}
+
+		if opt, err := bccsp.GetHashOptFromFamily(secLevel, hf.(string)); err != nil {
+			return "", nil, err
+		} else {
+			return hf.(string), opt, nil
+		}
+	default:
+		return "", nil, errors.Errorf("Could not find HashOpt from opts, no '%s' provider", config.ProviderName)
+	}
 }

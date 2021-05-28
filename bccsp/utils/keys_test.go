@@ -111,7 +111,7 @@ func TestECDSAKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed converting private key to DER [%s]", err)
 	}
-	keyFromDER, err := DERToPrivateKey(der, false)
+	keyFromDER, err := DERToPrivateKey(der)
 	if err != nil {
 		t.Fatalf("Failed converting DER to private key [%s]", err)
 	}
@@ -182,12 +182,12 @@ func TestECDSAKeys(t *testing.T) {
 		t.Fatal("PEMtoPublicKey should fail invalid PEM")
 	}
 
-	_, err = DERToPrivateKey(nil, false)
+	_, err = DERToPrivateKey(nil)
 	if err == nil {
 		t.Fatal("DERToPrivateKey should fail on nil")
 	}
 
-	_, err = DERToPrivateKey([]byte{0, 1, 3, 4}, false)
+	_, err = DERToPrivateKey([]byte{0, 1, 3, 4})
 	if err == nil {
 		t.Fatal("DERToPrivateKey should fail on invalid DER")
 	}

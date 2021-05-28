@@ -6,11 +6,11 @@
 #
 
 # if version not passed in, default to latest released version
-export VERSION=1.4.5
+export VERSION=1.4.7
 # if ca version not passed in, default to latest released version
-export CA_VERSION=1.4.5
+export CA_VERSION=1.4.7
 # current version of thirdparty images (couchdb, kafka and zookeeper) released
-export THIRDPARTY_IMAGE_VERSION=0.4.18
+export THIRDPARTY_IMAGE_VERSION=0.4.20
 export ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/windows/')-$(uname -m | sed 's/x86_64/amd64/g')")
 export MARCH=$(uname -m)
 
@@ -23,8 +23,8 @@ printHelp() {
   echo "-s : bypass fabric-samples repo clone"
   echo "-b : bypass download of platform-specific binaries"
   echo
-  echo "e.g. bootstrap.sh 1.4.5 -s"
-  echo "would download docker images and binaries for version 1.4.5"
+  echo "e.g. bootstrap.sh 1.4.7 -s"
+  echo "would download docker images and binaries for version 1.4.7"
 }
 
 dockerFabricPull() {
@@ -132,23 +132,24 @@ binaryDownload() {
       fi
 }
 
-binariesInstall() {
-  echo "===> Downloading version ${FABRIC_TAG} platform specific fabric binaries"
-  binaryDownload ${BINARY_FILE} https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric/hyperledger-fabric/${ARCH}-${VERSION}/${BINARY_FILE}
-  if [ $? -eq 22 ]; then
-     echo
-     echo "------> ${FABRIC_TAG} platform specific fabric binary is not available to download <----"
-     echo
-   fi
+#binariesInstall() {
+#  echo "===> Downloading version ${FABRIC_TAG} platform specific fabric binaries"
+#  binaryDownload ${BINARY_FILE} https://github.com/hyperledger/fabric/releases/download/v${VERSION}/${BINARY_FILE}
 
-  echo "===> Downloading version ${CA_TAG} platform specific fabric-ca-client binary"
-  binaryDownload ${CA_BINARY_FILE} https://nexus.hyperledger.org/content/repositories/releases/org/hyperledger/fabric-ca/hyperledger-fabric-ca/${ARCH}-${CA_VERSION}/${CA_BINARY_FILE}
-  if [ $? -eq 22 ]; then
-     echo
-     echo "------> ${CA_TAG} fabric-ca-client binary is not available to download  (Available from 1.1.0-rc1) <----"
-     echo
-   fi
-}
+#  if [ $? -eq 22 ]; then
+#     echo
+#     echo "------> ${FABRIC_TAG} platform specific fabric binary is not available to download <----"
+#     echo
+#   fi
+
+#  echo "===> Downloading version ${CA_TAG} platform specific fabric-ca-client binary"
+#  binaryDownload ${CA_BINARY_FILE} https://github.com/hyperledger/fabric-ca/releases/download/v${CA_VERSION}/${CA_BINARY_FILE}
+#  if [ $? -eq 22 ]; then
+#     echo
+#     echo "------> ${CA_TAG} fabric-ca-client binary is not available to download  (Available from 1.1.0-rc1) <----"
+#     echo
+#   fi
+#}
 
 dockerInstall() {
   which docker >& /dev/null

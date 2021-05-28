@@ -51,6 +51,7 @@ var (
 )
 
 type testConfig struct {
+	algorithm     string
 	securityLevel int
 	hashFamily    string
 }
@@ -60,17 +61,17 @@ func (tc testConfig) Provider(t *testing.T) (bccsp.BCCSP, bccsp.KeyStore, func()
 	assert.NoError(t, err)
 	ks, err := NewFileBasedKeyStore(nil, td, false)
 	assert.NoError(t, err)
-	p, err := NewWithParams(tc.securityLevel, tc.hashFamily, ks)
+	p, err := NewWithParams(tc.algorithm, tc.securityLevel, tc.hashFamily, ks)
 	assert.NoError(t, err)
 	return p, ks, func() { os.RemoveAll(td) }
 }
 
 func TestMain(m *testing.M) {
 	tests := []testConfig{
-		{256, "SHA2"},
-		{256, "SHA3"},
-		{384, "SHA2"},
-		{384, "SHA3"},
+		{"ECDSA", 256, "SHA2"},
+		{"ECDSA", 256, "SHA3"},
+		{"ECDSA", 384, "SHA2"},
+		{"ECDSA", 384, "SHA3"},
 	}
 
 	var err error
@@ -97,7 +98,7 @@ func TestInvalidNewParameter(t *testing.T) {
 	_, ks, cleanup := currentTestConfig.Provider(t)
 	defer cleanup()
 
-	r, err := NewWithParams(0, "SHA2", ks)
+	r, err := NewWithParams("ECDSA", 0, "SHA2", ks)
 	if err == nil {
 		t.Fatal("Error should be different from nil in this case")
 	}
@@ -105,7 +106,7 @@ func TestInvalidNewParameter(t *testing.T) {
 		t.Fatal("Return value should be equal to nil in this case")
 	}
 
-	r, err = NewWithParams(256, "SHA8", ks)
+	r, err = NewWithParams("ECDSA", 256, "SHA8", ks)
 	if err == nil {
 		t.Fatal("Error should be different from nil in this case")
 	}
@@ -113,7 +114,7 @@ func TestInvalidNewParameter(t *testing.T) {
 		t.Fatal("Return value should be equal to nil in this case")
 	}
 
-	r, err = NewWithParams(256, "SHA2", nil)
+	r, err = NewWithParams("ECDSA", 256, "SHA2", nil)
 	if err == nil {
 		t.Fatal("Error should be different from nil in this case")
 	}
@@ -121,7 +122,7 @@ func TestInvalidNewParameter(t *testing.T) {
 		t.Fatal("Return value should be equal to nil in this case")
 	}
 
-	r, err = NewWithParams(0, "SHA3", nil)
+	r, err = NewWithParams("ECDSA", 0, "SHA3", nil)
 	if err == nil {
 		t.Fatal("Error should be different from nil in this case")
 	}

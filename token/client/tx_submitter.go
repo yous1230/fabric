@@ -57,9 +57,7 @@ func NewTxSubmitter(config *ClientConfig) (*TxSubmitter, error) {
 
 	// TODO: make mspType configurable
 	mspType := "bccsp"
-	hashFamily := bccsp.SHA2
-	hashFunction := bccsp.SHA256
-	peercommon.InitCrypto(config.MspDir, config.MspId, mspType, hashFamily, hashFunction)
+	peercommon.InitCrypto(config.MspDir, config.MspId, mspType)
 
 	Signer, err := mspmgmt.GetLocalMSP().GetDefaultSigningIdentity()
 	if err != nil {

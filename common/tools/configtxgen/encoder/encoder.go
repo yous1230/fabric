@@ -7,22 +7,23 @@ SPDX-License-Identifier: Apache-2.0
 package encoder
 
 import (
+	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger/fabric/bccsp"
+	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/cauthdsl"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/crypto"
 	"github.com/hyperledger/fabric/common/flogging"
 	"github.com/hyperledger/fabric/common/genesis"
 	"github.com/hyperledger/fabric/common/policies"
+	"github.com/hyperledger/fabric/common/policies/orderer"
 	genesisconfig "github.com/hyperledger/fabric/common/tools/configtxgen/localconfig"
 	"github.com/hyperledger/fabric/common/tools/configtxlator/update"
 	"github.com/hyperledger/fabric/common/util"
 	"github.com/hyperledger/fabric/msp"
 	cb "github.com/hyperledger/fabric/protos/common"
-	"github.com/hyperledger/fabric/protos/orderer/etcdraft"
 	pb "github.com/hyperledger/fabric/protos/peer"
 	"github.com/hyperledger/fabric/protos/utils"
-
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +41,10 @@ const (
 	ConsensusTypeSolo = "solo"
 	// ConsensusTypeKafka identifies the Kafka-based consensus implementation.
 	ConsensusTypeKafka = "kafka"
+	// ConsensusTypeKafka identifies the etcdraft-based consensus implementation.
+	ConsensusTypeEtcdRaft = "etcdraft"
+	// ConsensusTypeSmartBFT identifies the SmartBFT-based consensus implementation.
+	ConsensusTypeSmartBFT = "smartbft"
 
 	// BlockValidationPolicyKey TODO
 	BlockValidationPolicyKey = "BlockValidation"
@@ -52,7 +57,18 @@ const (
 
 	// ImplicitMetaPolicyType is the 'Type' string for implicit meta policies
 	ImplicitMetaPolicyType = "ImplicitMeta"
+
+	// ImplicitOrdererPolicyType is the 'Type' string for implicit orderer policies
+	ImplicitOrdererPolicyType = "ImplicitOrderer"
 )
+
+var bccspConfig *factory.FactoryOpts
+var hashingAlgorithm string
+
+func SetBccspConfig(opts *factory.FactoryOpts, hash string) {
+	bccspConfig = opts
+	hashingAlgorithm = hash
+}
 
 func addValue(cg *cb.ConfigGroup, value channelconfig.ConfigValue, modPolicy string) {
 	cg.Values[value.Key()] = &cb.ConfigValue{
@@ -95,6 +111,18 @@ func addPolicies(cg *cb.ConfigGroup, policyMap map[string]*genesisconfig.Policy,
 					Value: utils.MarshalOrPanic(sp),
 				},
 			}
+		case ImplicitOrdererPolicyType:
+			iop, err := orderer.NewPolicyFromString(policy.Rule)
+			if err != nil {
+				return errors.Wrapf(err, "invalid signature policy rule '%s'", policy.Rule)
+			}
+			cg.Policies[policyName] = &cb.ConfigPolicy{
+				ModPolicy: modPolicy,
+				Policy: &cb.Policy{
+					Type:  int32(cb.Policy_IMPLICIT_ORDERER),
+					Value: utils.MarshalOrPanic(iop),
+				},
+			}
 		default:
 			return errors.Errorf("unknown policy type: %s", policy.Type)
 		}
@@ -107,6 +135,15 @@ func addImplicitMetaPolicyDefaults(cg *cb.ConfigGroup) {
 	addPolicy(cg, policies.ImplicitMetaMajorityPolicy(channelconfig.AdminsPolicyKey), channelconfig.AdminsPolicyKey)
 	addPolicy(cg, policies.ImplicitMetaAnyPolicy(channelconfig.ReadersPolicyKey), channelconfig.AdminsPolicyKey)
 	addPolicy(cg, policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey), channelconfig.AdminsPolicyKey)
+}
+
+// addOrdererImplicitMetaPolicyDefaults adds the orderer's Readers/Writers/Admins/BlockValidation policies, with Any/Any/Majority/Any rules respectively.
+func addOrdererImplicitMetaPolicyDefaults(cg *cb.ConfigGroup) {
+	cg.Policies[BlockValidationPolicyKey] = &cb.ConfigPolicy{
+		Policy:    policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey).Value(),
+		ModPolicy: channelconfig.AdminsPolicyKey,
+	}
+	addImplicitMetaPolicyDefaults(cg)
 }
 
 // addSignaturePolicyDefaults adds the Readers/Writers/Admins policies as signature policies requiring one signature from the given mspID.
@@ -186,16 +223,22 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 	ordererGroup := cb.NewConfigGroup()
 	if len(conf.Policies) == 0 {
 		logger.Warningf("Default policy emission is deprecated, please include policy specifications for the orderer group in configtx.yaml")
-		addImplicitMetaPolicyDefaults(ordererGroup)
+		addOrdererImplicitMetaPolicyDefaults(ordererGroup)
 	} else {
 		if err := addPolicies(ordererGroup, conf.Policies, channelconfig.AdminsPolicyKey); err != nil {
 			return nil, errors.Wrapf(err, "error adding policies to orderer group")
 		}
 	}
-	ordererGroup.Policies[BlockValidationPolicyKey] = &cb.ConfigPolicy{
-		Policy:    policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey).Value(),
-		ModPolicy: channelconfig.AdminsPolicyKey,
+	if p, ok := ordererGroup.Policies[BlockValidationPolicyKey]; !ok {
+		ordererGroup.Policies[BlockValidationPolicyKey] = &cb.ConfigPolicy{
+			Policy:    policies.ImplicitMetaAnyPolicy(channelconfig.WritersPolicyKey).Value(),
+			ModPolicy: channelconfig.AdminsPolicyKey,
+		}
+		logger.Debugf("Added Key: %s, Policy: %v", BlockValidationPolicyKey, p)
+	} else {
+		logger.Debugf("Existing Key: %s, Policy: %v", BlockValidationPolicyKey, p)
 	}
+
 	addValue(ordererGroup, channelconfig.BatchSizeValue(
 		conf.BatchSize.MaxMessageCount,
 		conf.BatchSize.AbsoluteMaxBytes,
@@ -215,10 +258,15 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 	case ConsensusTypeSolo:
 	case ConsensusTypeKafka:
 		addValue(ordererGroup, channelconfig.KafkaBrokersValue(conf.Kafka.Brokers), channelconfig.AdminsPolicyKey)
-	case etcdraft.TypeKey:
-		if consensusMetadata, err = etcdraft.Marshal(conf.EtcdRaft); err != nil {
-			return nil, errors.Errorf("cannot marshal metadata for orderer type %s: %s", etcdraft.TypeKey, err)
+	case ConsensusTypeEtcdRaft:
+		if consensusMetadata, err = channelconfig.MarshalEtcdRaftMetadata(conf.EtcdRaft); err != nil {
+			return nil, errors.Errorf("cannot marshal metadata for orderer type %s: %s", ConsensusTypeEtcdRaft, err)
 		}
+	case ConsensusTypeSmartBFT:
+		if consensusMetadata, err = channelconfig.MarshalSmartBFTMetadata(conf.SmartBFT); err != nil {
+			return nil, errors.Errorf("cannot marshal metadata for orderer type %s: %s", ConsensusTypeSmartBFT, err)
+		}
+
 	default:
 		return nil, errors.Errorf("unknown orderer type: %s", conf.OrdererType)
 	}
@@ -240,7 +288,7 @@ func NewOrdererGroup(conf *genesisconfig.Orderer) (*cb.ConfigGroup, error) {
 // NewConsortiumsGroup returns an org component of the channel configuration.  It defines the crypto material for the
 // organization (its MSP).  It sets the mod_policy of all elements to "Admins".
 func NewConsortiumOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org: %s", conf.Name)
 	}
@@ -265,7 +313,7 @@ func NewConsortiumOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, e
 // NewOrdererOrgGroup returns an orderer org component of the channel configuration.  It defines the crypto material for the
 // organization (its MSP).  It sets the mod_policy of all elements to "Admins".
 func NewOrdererOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org: %s", conf.Name)
 	}
@@ -327,7 +375,7 @@ func NewApplicationGroup(conf *genesisconfig.Application) (*cb.ConfigGroup, erro
 // NewApplicationOrgGroup returns an application org component of the channel configuration.  It defines the crypto material for the organization
 // (its MSP) as well as its anchor peers for use by the gossip network.  It sets the mod_policy of all elements to "Admins".
 func NewApplicationOrgGroup(conf *genesisconfig.Organization) (*cb.ConfigGroup, error) {
-	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, conf.Hash.HashFamily, conf.Hash.HashFunction)
+	mspConfig, err := msp.GetVerifyingMspConfig(conf.MSPDir, conf.ID, conf.MSPType, bccspConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "1 - Error loading MSP configuration for org %s", conf.Name)
 	}
@@ -431,6 +479,15 @@ func NewChannelCreateConfigUpdate(channelID string, conf *genesisconfig.Profile,
 		Value: utils.MarshalOrPanic(&cb.Consortium{
 			Name: conf.Consortium,
 		}),
+	}
+	if hashingAlgorithm != bccsp.SHA256 {
+		updt.ReadSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{Version: 0}
+		updt.WriteSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{
+			Version: 0,
+			Value: utils.MarshalOrPanic(&cb.HashingAlgorithm{
+				Name: hashingAlgorithm,
+			}),
+		}
 	}
 
 	return updt, nil
@@ -557,20 +614,55 @@ func MakeChannelCreationTransactionFromTemplate(channelID string, signer crypto.
 	return utils.CreateSignedEnvelope(cb.HeaderType_CONFIG_UPDATE, channelID, signer, newConfigUpdateEnv, msgVersion, epoch)
 }
 
+// HasSkippedForeignOrgs is used to detect whether a configuration includes
+// org definitions which should not be parsed because this tool is being
+// run in a context where the user does not have access to that org's info
+func HasSkippedForeignOrgs(conf *genesisconfig.Profile) error {
+	var organizations []*genesisconfig.Organization
+
+	if conf.Orderer != nil {
+		organizations = append(organizations, conf.Orderer.Organizations...)
+	}
+
+	if conf.Application != nil {
+		organizations = append(organizations, conf.Application.Organizations...)
+	}
+
+	for _, consortium := range conf.Consortiums {
+		organizations = append(organizations, consortium.Organizations...)
+	}
+
+	return nil
+}
+
 // Bootstrapper is a wrapper around NewChannelConfigGroup which can produce genesis blocks
 type Bootstrapper struct {
 	channelGroup *cb.ConfigGroup
 }
 
-// New creates a new Bootstrapper for generating genesis blocks
-func New(config *genesisconfig.Profile) *Bootstrapper {
+// NewBootstrapper creates a bootstrapper but returns an error instead of panic-ing
+func NewBootstrapper(config *genesisconfig.Profile) (*Bootstrapper, error) {
+	if err := HasSkippedForeignOrgs(config); err != nil {
+		return nil, errors.WithMessage(err, "all org definitions must be local during bootstrapping")
+	}
+
 	channelGroup, err := NewChannelGroup(config)
 	if err != nil {
-		logger.Panicf("Error creating channel group: %s", err)
+		return nil, errors.WithMessage(err, "could not create channel group")
 	}
+
 	return &Bootstrapper{
 		channelGroup: channelGroup,
+	}, nil
+}
+
+// New creates a new Bootstrapper for generating genesis blocks
+func New(config *genesisconfig.Profile) *Bootstrapper {
+	bs, err := NewBootstrapper(config)
+	if err != nil {
+		logger.Panicf("Error creating bootsrapper: %s", err)
 	}
+	return bs
 }
 
 // GenesisBlock produces a genesis block for the default test chain id
@@ -581,4 +673,25 @@ func (bs *Bootstrapper) GenesisBlock() *cb.Block {
 // GenesisBlockForChannel produces a genesis block for a given channel ID
 func (bs *Bootstrapper) GenesisBlockForChannel(channelID string) *cb.Block {
 	return genesis.NewFactoryImpl(bs.channelGroup).Block(channelID)
+}
+
+type SignerSerializer interface {
+	crypto.Signer
+	crypto.IdentitySerializer
+}
+
+func newSignatureHeaderOrPanic(signer SignerSerializer) *cb.SignatureHeader {
+	creator, err := signer.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	nonce, err := crypto.GetRandomNonce()
+	if err != nil {
+		panic(err)
+	}
+
+	return &cb.SignatureHeader{
+		Creator: creator,
+		Nonce:   nonce,
+	}
 }

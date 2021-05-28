@@ -16,20 +16,19 @@ limitations under the License.
 package sw
 
 import (
-	"crypto/rand"
-
 	"github.com/hyperledger/fabric/bccsp"
-	"github.com/zhigui-projects/gmsm/sm2"
+	gm_plugins "github.com/zhigui-projects/gm-plugins"
+	"github.com/zhigui-projects/gm-plugins/primitive"
 )
 
-func signGMSM2(k *sm2.PrivateKey, msg []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
-	signature, err = k.Sign(rand.Reader, msg, opts)
-	return
+var SmCrypto = gm_plugins.GetSmCryptoSuite()
+
+func signGMSM2(k *primitive.Sm2PrivateKey, msg []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
+	return SmCrypto.Sign(k, msg, opts)
 }
 
-func verifyGMSM2(k *sm2.PublicKey, signature, msg []byte, opts bccsp.SignerOpts) (valid bool, err error) {
-	valid = k.Verify(msg, signature)
-	return
+func verifyGMSM2(k *primitive.Sm2PublicKey, signature, msg []byte, opts bccsp.SignerOpts) (valid bool, err error) {
+	return SmCrypto.Verify(k, signature, msg, opts)
 }
 
 type gmsm2Signer struct{}
@@ -41,17 +40,17 @@ func (s *gmsm2Signer) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (s
 type gmsm2PrivateKeySigner struct{}
 
 func (s *gmsm2PrivateKeySigner) Sign(k bccsp.Key, digest []byte, opts bccsp.SignerOpts) (signature []byte, err error) {
-	puk := k.(*gmsm2PrivateKey).privKey.PublicKey
-	sm2pk := sm2.PublicKey{
+	puk := k.(*gmsm2PrivateKey).privKey.Sm2PublicKey
+	sm2pk := primitive.Sm2PublicKey{
 		Curve: puk.Curve,
 		X:     puk.X,
 		Y:     puk.Y,
 	}
 
 	privKey := k.(*gmsm2PrivateKey).privKey
-	sm2privKey := sm2.PrivateKey{
-		D:         privKey.D,
-		PublicKey: sm2pk,
+	sm2privKey := primitive.Sm2PrivateKey{
+		D:            privKey.D,
+		Sm2PublicKey: sm2pk,
 	}
 
 	return signGMSM2(&sm2privKey, digest, opts)
@@ -60,7 +59,7 @@ func (s *gmsm2PrivateKeySigner) Sign(k bccsp.Key, digest []byte, opts bccsp.Sign
 type gmsm2PrivateKeyVerifier struct{}
 
 func (v *gmsm2PrivateKeyVerifier) Verify(k bccsp.Key, signature, digest []byte, opts bccsp.SignerOpts) (valid bool, err error) {
-	return verifyGMSM2(&(k.(*gmsm2PrivateKey).privKey.PublicKey), signature, digest, opts)
+	return verifyGMSM2(&(k.(*gmsm2PrivateKey).privKey.Sm2PublicKey), signature, digest, opts)
 }
 
 type gmsm2PublicKeyKeyVerifier struct{}

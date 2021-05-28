@@ -78,7 +78,7 @@ func newPeerMockWithGRPC(port int, gRPCServer *comm.GRPCServer, certs *common.TL
 		msgAssertions:        msgAssertions,
 		t:                    t,
 		pkiID:                common.PKIidType(fmt.Sprintf("127.0.0.1:%d", port)),
-		selfCertHash:         util.ComputeHash(certs.TLSServerCert.Load().(*tls.Certificate).Certificate[0]),
+		selfCertHash:         util.ComputeSHA256(certs.TLSServerCert.Load().(*tls.Certificate).Certificate[0]),
 		expectedMsgs2Receive: uint32(expectedMsgs2Receive),
 	}
 	p.finishedSignal.Add(1)

@@ -29,6 +29,7 @@ import (
 
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 )
 
 type validity struct {
@@ -67,18 +68,6 @@ func isECDSASignedCert(cert *x509.Certificate) bool {
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA256 ||
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA384 ||
 		cert.SignatureAlgorithm == x509.ECDSAWithSHA512
-}
-
-const (
-	SM2WithSM3 x509.SignatureAlgorithm = 100 + iota
-	SM2WithSHA1
-	SM2WithSHA256
-)
-
-func isSM2SignedCert(cert *x509.Certificate) bool {
-	return cert.SignatureAlgorithm == SM2WithSM3 ||
-		cert.SignatureAlgorithm == SM2WithSHA1 ||
-		cert.SignatureAlgorithm == SM2WithSHA256
 }
 
 // sanitizeECDSASignedCert checks that the signatures signing a cert
@@ -124,7 +113,7 @@ func sanitizeECDSASignedCert(cert *x509.Certificate, parentCert *x509.Certificat
 	}
 
 	// 4. parse newRaw to get an x509 certificate
-	return x509.ParseCertificate(newRaw)
+	return gcx.GetX509().ParseCertificate(newRaw)
 }
 
 func certFromX509Cert(cert *x509.Certificate) (certificate, error) {

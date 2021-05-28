@@ -10,9 +10,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 
-	localconfig "github.com/hyperledger/fabric/orderer/common/localconfig"
-
 	"github.com/Shopify/sarama"
+	"github.com/hyperledger/fabric/core/comm"
+	localconfig "github.com/hyperledger/fabric/orderer/common/localconfig"
+	gm_tls "github.com/zhigui-projects/gm-crypto/tls"
 )
 
 func newBrokerConfig(
@@ -42,14 +43,14 @@ func newBrokerConfig(
 	brokerConfig.Net.TLS.Enable = tlsConfig.Enabled
 	if brokerConfig.Net.TLS.Enable {
 		// create public/private key pair structure
-		keyPair, err := tls.X509KeyPair([]byte(tlsConfig.Certificate), []byte(tlsConfig.PrivateKey))
+		keyPair, err := gm_tls.X509KeyPair([]byte(tlsConfig.Certificate), []byte(tlsConfig.PrivateKey))
 		if err != nil {
 			logger.Panic("Unable to decode public/private key pair:", err)
 		}
 		// create root CA pool
 		rootCAs := x509.NewCertPool()
 		for _, certificate := range tlsConfig.RootCAs {
-			if !rootCAs.AppendCertsFromPEM([]byte(certificate)) {
+			if err = comm.AddPemToCertPool([]byte(certificate), rootCAs); err != nil {
 				logger.Panic("Unable to parse the root certificate authority certificates (Kafka.Tls.RootCAs)")
 			}
 		}

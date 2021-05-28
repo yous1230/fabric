@@ -25,6 +25,8 @@ type mockKey struct {
 	pubKey    bccsp.Key
 }
 
+const testCryptoConf = "SW/ECDSA/SHA2-256"
+
 func (mk *mockKey) Bytes() ([]byte, error) {
 	if mk.bytesErr != nil {
 		return nil, mk.bytesErr
@@ -45,14 +47,18 @@ func (mk *mockKey) Symmetric() bool { return false }
 
 func (mk *mockKey) Private() bool { return false }
 
+func (mk *mockKey) PrivateKey() (interface{}, error) {
+	return nil, errors.New("this is a public key [mockKet]")
+}
+
 var testDir = filepath.Join(os.TempDir(), "csp-test")
 
 func TestLoadPrivateKey(t *testing.T) {
-	priv, _, _ := csp.GeneratePrivateKey(testDir)
+	priv, _, _ := csp.GeneratePrivateKey(testDir, testCryptoConf)
 	pkFile := filepath.Join(testDir, hex.EncodeToString(priv.SKI())+"_sk")
 	assert.Equal(t, true, checkForFile(pkFile),
 		"Expected to find private key file")
-	loadedPriv, _, _ := csp.LoadPrivateKey(testDir)
+	loadedPriv, _, _ := csp.LoadPrivateKey(testDir, testCryptoConf)
 	assert.NotNil(t, loadedPriv, "Should have returned a bccsp.Key")
 	assert.Equal(t, priv.SKI(), loadedPriv.SKI(), "Should have same subject identifier")
 	cleanup(testDir)
@@ -73,7 +79,7 @@ func TestLoadPrivateKey_wrongEncoding(t *testing.T) {
 		panic("failed to write to " + filename + ":" + err.Error())
 	}
 	file.Close() // To flush test file content
-	_, _, err = csp.LoadPrivateKey(testDir)
+	_, _, err = csp.LoadPrivateKey(testDir, testCryptoConf)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, testDir+"/wrong_encoding_sk: wrong PEM encoding")
 	cleanup(testDir)
@@ -81,7 +87,7 @@ func TestLoadPrivateKey_wrongEncoding(t *testing.T) {
 
 func TestGeneratePrivateKey(t *testing.T) {
 
-	priv, signer, err := csp.GeneratePrivateKey(testDir)
+	priv, signer, err := csp.GeneratePrivateKey(testDir, testCryptoConf)
 	assert.NoError(t, err, "Failed to generate private key")
 	assert.NotNil(t, priv, "Should have returned a bccsp.Key")
 	assert.Equal(t, true, priv.Private(), "Failed to return private key")
@@ -96,7 +102,7 @@ func TestGeneratePrivateKey(t *testing.T) {
 
 func TestGetECPublicKey(t *testing.T) {
 
-	priv, _, err := csp.GeneratePrivateKey(testDir)
+	priv, _, err := csp.GeneratePrivateKey(testDir, testCryptoConf)
 	assert.NoError(t, err, "Failed to generate private key")
 
 	ecPubKey, err := csp.GetECPublicKey(priv)

@@ -314,7 +314,6 @@ func TestLoadLocalMSP(t *testing.T) {
 						BCCSP: &factory.FactoryOpts{
 							ProviderName: "SW",
 							SwOpts: &factory.SwOpts{
-								Algorithm:  "ECDSA",
 								HashFamily: "SHA2",
 								SecLevel:   256,
 								Ephemeral:  true,
@@ -412,7 +411,7 @@ func TestUpdateTrustedRoots(t *testing.T) {
 	}
 	lf, _ := createLedgerFactory(conf, &disabled.Provider{})
 	bootBlock := encoder.New(genesisconfig.Load(genesisconfig.SampleDevModeSoloProfile)).GenesisBlockForChannel("system")
-	initializeMultichannelRegistrar(bootBlock, &replicationInitiator{}, &cluster.PredicateDialer{}, comm.ServerConfig{}, nil, genesisConfig(t), localmsp.NewSigner(), &disabled.Provider{}, &mocks.HealthChecker{}, lf, callback)
+	initializeMultichannelRegistrar(bootBlock, &replicationInitiator{logger: logger}, &cluster.PredicateDialer{}, comm.ServerConfig{}, nil, genesisConfig(t), localmsp.NewSigner(), &disabled.Provider{}, &mocks.HealthChecker{}, lf, callback)
 	t.Logf("# app CAs: %d", len(caSupport.AppRootCAsByChain[genesisconfig.TestChainID]))
 	t.Logf("# orderer CAs: %d", len(caSupport.OrdererRootCAsByChainAndOrg[genesisconfig.TestChainID]["SampleOrg"]))
 	// mutual TLS not required so no updates should have occurred
@@ -452,7 +451,7 @@ func TestUpdateTrustedRoots(t *testing.T) {
 	}
 	initializeMultichannelRegistrar(
 		bootBlock,
-		&replicationInitiator{},
+		&replicationInitiator{logger: logger},
 		predDialer,
 		comm.ServerConfig{},
 		nil,
@@ -707,7 +706,7 @@ func TestInitializeEtcdraftConsenter(t *testing.T) {
 		&localconfig.TopLevel{},
 		rlf,
 		&cluster.PredicateDialer{},
-		genesisBlock, &replicationInitiator{},
+		genesisBlock, &replicationInitiator{logger: logger},
 		comm.ServerConfig{
 			SecOpts: &comm.SecureOptions{
 				Certificate: crt.Cert,
@@ -732,7 +731,6 @@ func genesisConfig(t *testing.T) *localconfig.TopLevel {
 			BCCSP: &factory.FactoryOpts{
 				ProviderName: "SW",
 				SwOpts: &factory.SwOpts{
-					Algorithm:  "ECDSA",
 					HashFamily: "SHA2",
 					SecLevel:   256,
 					Ephemeral:  true,

@@ -6,6 +6,7 @@ required = [
     "golang.org/x/lint/golint",
     "golang.org/x/tools/cmd/goimports",
     "github.com/golang/protobuf/protoc-gen-go",
+    "github.com/zhigui-projects/gm-go",
 ]
 
 ignored = [
@@ -195,13 +196,10 @@ noverify = [
   version = "0.9.0"
 
 [[constraint]]
-  name = "github.com/zhigui-projects/gmsm"
-  version = "v1.2.2"
+  branch = "leader_rotation"
+  name = "github.com/SmartBFT-Go/consensus"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/zhigui-projects/x509"
+  name = "github.com/SmartBFT-Go/randomcommittees"
 
-[[constraint]]
-  branch = "master"
-  name = "github.com/zhigui-projects/tls"

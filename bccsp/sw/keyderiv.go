@@ -124,7 +124,7 @@ func (kd *ecdsaPrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOp
 }
 
 type aesPrivateKeyKeyDeriver struct {
-	conf *config
+	conf *Config
 }
 
 func (kd *aesPrivateKeyKeyDeriver) KeyDeriv(k bccsp.Key, opts bccsp.KeyDerivOpts) (bccsp.Key, error) {

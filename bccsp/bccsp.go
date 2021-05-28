@@ -42,6 +42,10 @@ type Key interface {
 	// PublicKey returns the corresponding public key part of an asymmetric public/private key pair.
 	// This method returns an error in symmetric key schemes.
 	PublicKey() (Key, error)
+
+	// PrivateKey returns the corresponding privare key part of an asymmetric public/private key pair.
+	// This method returns an error in symmetric key schemes or Private() is false.
+	PrivateKey() (interface{}, error)
 }
 
 // KeyGenOpts contains options for key-generation with a CSP.

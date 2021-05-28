@@ -47,6 +47,7 @@ import (
 	"github.com/hyperledger/fabric/orderer/consensus"
 	"github.com/hyperledger/fabric/orderer/consensus/etcdraft"
 	"github.com/hyperledger/fabric/orderer/consensus/kafka"
+	"github.com/hyperledger/fabric/orderer/consensus/smartbft"
 	"github.com/hyperledger/fabric/orderer/consensus/solo"
 	cb "github.com/hyperledger/fabric/protos/common"
 	ab "github.com/hyperledger/fabric/protos/orderer"
@@ -66,7 +67,10 @@ var (
 	version   = app.Command("version", "Show version information")
 	benchmark = app.Command("benchmark", "Run orderer in benchmark mode")
 
-	clusterTypes = map[string]struct{}{"etcdraft": {}}
+	clusterTypes = map[string]struct{}{
+		"etcdraft": {},
+		"smartbft": {},
+	}
 )
 
 // Main is the entry point of orderer process
@@ -593,19 +597,19 @@ func isClusterType(genesisBlock *cb.Block) bool {
 
 func consensusType(genesisBlock *cb.Block) string {
 	if genesisBlock.Data == nil || len(genesisBlock.Data.Data) == 0 {
-		logger.Fatalf("Empty genesis block")
+		logger.Panicf("Empty genesis block")
 	}
 	env := &cb.Envelope{}
 	if err := proto.Unmarshal(genesisBlock.Data.Data[0], env); err != nil {
-		logger.Fatalf("Failed to unmarshal the genesis block's envelope: %v", err)
+		logger.Panicf("Failed to unmarshal the genesis block's envelope: %v", err)
 	}
 	bundle, err := channelconfig.NewBundleFromEnvelope(env)
 	if err != nil {
-		logger.Fatalf("Failed creating bundle from the genesis block: %v", err)
+		logger.Panicf("Failed creating bundle from the genesis block: %v", err)
 	}
 	ordConf, exists := bundle.OrdererConfig()
 	if !exists {
-		logger.Fatalf("Orderer config doesn't exist in bundle derived from genesis block")
+		logger.Panicf("Orderer config doesn't exist in bundle derived from genesis block")
 	}
 	return ordConf.ConsensusType()
 }
@@ -627,7 +631,7 @@ func initializeGrpcServer(conf *localconfig.TopLevel, serverConfig comm.ServerCo
 
 func initializeLocalMsp(conf *localconfig.TopLevel) {
 	// Load local MSP
-	err := mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID, conf.General.Hash.HashFamily, conf.General.Hash.HashFunction)
+	err := mspmgmt.LoadLocalMsp(conf.General.LocalMSPDir, conf.General.BCCSP, conf.General.LocalMSPID)
 	if err != nil { // Handle errors reading the config file
 		logger.Fatal("Failed to initialize local MSP:", err)
 	}
@@ -661,9 +665,12 @@ func initializeMultichannelRegistrar(
 		logger.Info("Not bootstrapping because of existing channels")
 	}
 
-	consenters := make(map[string]consensus.Consenter)
+	dpmr := &DynamicPolicyManagerRegistry{}
+	callbacks = append(callbacks, dpmr.Update)
 
-	registrar := multichannel.NewRegistrar(*conf, lf, signer, metricsProvider, callbacks...)
+	registrar := multichannel.NewRegistrar(*conf, lf, &localSigner{signer: signer}, metricsProvider, callbacks...)
+
+	consenters := make(map[string]consensus.Consenter)
 
 	var icr etcdraft.InactiveChainRegistry
 	if isClusterType(bootstrapBlock) {
@@ -672,6 +679,22 @@ func initializeMultichannelRegistrar(
 	}
 
 	consenters["solo"] = solo.New()
+	consenterType := consensusType(genesisBlock)
+	var icr cluster.InactiveChainRegistry
+	if _, exists := clusterTypes[consenterType]; exists {
+		switch consenterType {
+		case "etcdraft":
+			{
+				icr = initializeEtcdraftConsenter(consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
+			}
+		case "smartbft":
+			{
+				icr = initializeSmartBFTConsenter(signer, dpmr, consenters, conf, lf, clusterDialer, bootstrapBlock, ri, srvConf, srv, registrar, metricsProvider)
+			}
+		default:
+			logger.Panicf("Unknown cluster type consenter")
+		}
+	}
 	var kafkaMetrics *kafka.Metrics
 	consenters["kafka"], kafkaMetrics = kafka.New(conf.Kafka, metricsProvider, healthChecker, icr, registrar.CreateChain)
 	// Note, we pass a 'nil' channel here, we could pass a channel that
@@ -694,6 +717,55 @@ func initializeEtcdraftConsenter(
 	registrar *multichannel.Registrar,
 	metricsProvider metrics.Provider,
 ) *etcdraft.Consenter {
+	icr := constructInactiveChainReplicator(ri, lf, conf, bootstrapBlock, ri.logger)
+	// Use the inactiveChainReplicator as a channel lister, since it has knowledge
+	// of all inactive chains.
+	// This is to prevent us pulling the entire system chain when attempting to enumerate
+	// the channels in the system.
+	ri.channelLister = icr
+
+	go icr.run()
+	raftConsenter := etcdraft.New(clusterDialer, conf, srvConf, srv, registrar, icr, metricsProvider)
+	consenters["etcdraft"] = raftConsenter
+	return raftConsenter
+}
+
+func initializeSmartBFTConsenter(
+	signer crypto.SignerSupport,
+	dpmr *DynamicPolicyManagerRegistry,
+	consenters map[string]consensus.Consenter,
+	conf *localconfig.TopLevel,
+	lf blockledger.Factory,
+	clusterDialer *cluster.PredicateDialer,
+	bootstrapBlock *cb.Block,
+	ri *replicationInitiator,
+	srvConf comm.ServerConfig,
+	srv *comm.GRPCServer,
+	registrar *multichannel.Registrar,
+	metricsProvider metrics.Provider,
+) *smartbft.Consenter {
+	icr := constructInactiveChainReplicator(ri, lf, conf, bootstrapBlock, ri.logger)
+	// Use the inactiveChainReplicator as a channel lister, since it has knowledge
+	// of all inactive chains.
+	// This is to prevent us pulling the entire system chain when attempting to enumerate
+	// the channels in the system.
+	ri.channelLister = icr
+
+	go icr.run()
+	smartBFTConsenter := smartbft.New(icr, dpmr.Registry(), signer, clusterDialer, conf, srvConf, srv, registrar, metricsProvider)
+	consenters["smartbft"] = smartBFTConsenter
+
+	return smartBFTConsenter
+}
+
+func constructInactiveChainReplicator(
+	ri *replicationInitiator,
+	lf blockledger.Factory,
+	conf *localconfig.TopLevel,
+	bootstrapBlock *cb.Block,
+	logger *flogging.FabricLogger,
+) *inactiveChainReplicator {
+
 	replicationRefreshInterval := conf.General.Cluster.ReplicationBackgroundRefreshInterval
 	if replicationRefreshInterval == 0 {
 		replicationRefreshInterval = defaultReplicationBackgroundRefreshInterval
@@ -701,11 +773,11 @@ func initializeEtcdraftConsenter(
 
 	systemChannelName, err := utils.GetChainIDFromBlock(bootstrapBlock)
 	if err != nil {
-		ri.logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)
+		logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)
 	}
 	systemLedger, err := lf.GetOrCreate(systemChannelName)
 	if err != nil {
-		ri.logger.Panicf("Failed obtaining system channel (%s) ledger: %v", systemChannelName, err)
+		logger.Panicf("Failed obtaining system channel (%s) ledger: %v", systemChannelName, err)
 	}
 	getConfigBlock := func() *cb.Block {
 		return multichannel.ConfigBlock(systemLedger)
@@ -724,16 +796,8 @@ func initializeEtcdraftConsenter(
 		registerChain:                     ri.registerChain,
 	}
 
-	// Use the inactiveChainReplicator as a channel lister, since it has knowledge
-	// of all inactive chains.
-	// This is to prevent us pulling the entire system chain when attempting to enumerate
-	// the channels in the system.
-	ri.channelLister = icr
+	return icr
 
-	go icr.run()
-	raftConsenter := etcdraft.New(clusterDialer, conf, srvConf, srv, registrar, icr, metricsProvider)
-	consenters["etcdraft"] = raftConsenter
-	return raftConsenter
 }
 
 func newOperationsSystem(ops localconfig.Operations, metrics localconfig.Metrics) *operations.System {
@@ -886,4 +950,32 @@ func prettyPrintStruct(i interface{}) {
 		buffer.WriteString(params[i])
 	}
 	logger.Infof("Orderer config values:%s\n", buffer.String())
+}
+
+func newSignatureHeaderOrPanic(signer crypto.SignerSupport) *cb.SignatureHeader {
+	creator, err := signer.Serialize()
+	if err != nil {
+		panic(err)
+	}
+	nonce, err := crypto.GetRandomNonce()
+	if err != nil {
+		panic(err)
+	}
+
+	return &cb.SignatureHeader{
+		Creator: creator,
+		Nonce:   nonce,
+	}
+}
+
+type localSigner struct {
+	signer smartbft.SignerSerializer
+}
+
+func (ls *localSigner) NewSignatureHeader() (*cb.SignatureHeader, error) {
+	return newSignatureHeaderOrPanic(ls.signer), nil
+}
+
+func (ls *localSigner) Sign(message []byte) ([]byte, error) {
+	return ls.signer.Sign(message)
 }

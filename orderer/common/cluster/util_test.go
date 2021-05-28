@@ -177,6 +177,7 @@ func TestVerifyBlockSignature(t *testing.T) {
 	verifier := &mocks.BlockVerifier{}
 	var nilConfigEnvelope *common.ConfigEnvelope
 	verifier.On("VerifyBlockSignature", mock.Anything, nilConfigEnvelope).Return(nil)
+	verifier.On("Id2Identity", mock.Anything).Return(nil)
 
 	block := createBlockChain(3, 3)[0]
 
@@ -320,6 +321,8 @@ func TestVerifyBlocks(t *testing.T) {
 	var sigSet1 []*common.SignedData
 	var sigSet2 []*common.SignedData
 
+	var sequenceSignatures *[][]*common.SignedData
+
 	configEnvelope1 := &common.ConfigEnvelope{
 		Config: &common.Config{
 			Sequence: 1,
@@ -348,6 +351,8 @@ func TestVerifyBlocks(t *testing.T) {
 		configureVerifier     func(*mocks.BlockVerifier)
 		mutateBlockSequence   func([]*common.Block) []*common.Block
 		expectedError         string
+		verifyFunc            func(blockBuff []*common.Block, signatureVerifier cluster.BlockVerifier) error
+		expectedVerificationCalls int
 		verifierExpectedCalls int
 	}{
 		{
@@ -368,7 +373,8 @@ func TestVerifyBlocks(t *testing.T) {
 				"mismatches 75's prev block hash (07)",
 		},
 		{
-			name: "bad signature",
+			name:                      "bad signature",
+			expectedVerificationCalls: 1,
 			mutateBlockSequence: func(blockSequence []*common.Block) []*common.Block {
 				return blockSequence
 			},
@@ -392,7 +398,8 @@ func TestVerifyBlocks(t *testing.T) {
 			expectedError: "nil header in payload",
 		},
 		{
-			name: "config blocks in the sequence need to be verified and one of them is improperly signed",
+			name:                      "config blocks in the sequence need to be verified and one of them is improperly signed",
+			expectedVerificationCalls: 2,
 			mutateBlockSequence: func(blockSequence []*common.Block) []*common.Block {
 				var err error
 				// Put a config transaction in block n / 4
@@ -409,9 +416,9 @@ func TestVerifyBlocks(t *testing.T) {
 
 				assignHashes(blockSequence)
 
-				sigSet1, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/4])
+				sigSet1, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/4], nil)
 				assert.NoError(t, err)
-				sigSet2, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/2])
+				sigSet2, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/2], nil)
 				assert.NoError(t, err)
 
 				return blockSequence
@@ -429,7 +436,9 @@ func TestVerifyBlocks(t *testing.T) {
 			verifierExpectedCalls: 2,
 		},
 		{
-			name: "config block in the sequence needs to be verified, and it is properly signed",
+			name:                      "config block in the sequence needs to be verified, and it is properly signed",
+			expectedVerificationCalls: 2,
+
 			mutateBlockSequence: func(blockSequence []*common.Block) []*common.Block {
 				var err error
 				// Put a config transaction in block n / 4
@@ -440,10 +449,10 @@ func TestVerifyBlocks(t *testing.T) {
 
 				assignHashes(blockSequence)
 
-				sigSet1, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/4])
+				sigSet1, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)/4], nil)
 				assert.NoError(t, err)
 
-				sigSet2, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)-1])
+				sigSet2, err = cluster.SignatureSetFromBlock(blockSequence[len(blockSequence)-1], nil)
 				assert.NoError(t, err)
 
 				return blockSequence
@@ -498,21 +507,62 @@ func TestVerifyBlocks(t *testing.T) {
 			// since the last block is a config block.
 			verifierExpectedCalls: 2,
 		},
+		{
+			name:                      "config block in the sequence needs to be verified, along with all other blocks",
+			expectedVerificationCalls: 51,
+			mutateBlockSequence: func(blockSequence []*common.Block) []*common.Block {
+				// Put a config transaction in block n / 4
+				blockSequence[len(blockSequence)/4].Data = &common.BlockData{
+					Data: [][]byte{utils.MarshalOrPanic(configTransaction(configEnvelope1))},
+				}
+				for i := 1; i < len(blockSequence); i++ {
+					blockSequence[i-1].Header.DataHash = blockSequence[i-1].Data.Hash()
+					blockSequence[i].Header.PreviousHash = blockSequence[i-1].Header.Hash()
+				}
+
+				seqSigs := make([][]*common.SignedData, len(blockSequence))
+				sequenceSignatures = &seqSigs
+				var err error
+				for i := 0; i < len(blockSequence); i++ {
+					(*sequenceSignatures)[i], err = cluster.SignatureSetFromBlock(blockSequence[i], nil)
+					assert.NoError(t, err)
+				}
+				return blockSequence
+			},
+			configureVerifier: func(verifier *mocks.BlockVerifier) {
+				verifier.Mock = mock.Mock{}
+				verifier.On("Id2Identity", mock.Anything).Return(nil)
+				confEnv1 := &common.ConfigEnvelope{}
+				proto.Unmarshal(utils.MarshalOrPanic(configEnvelope1), confEnv1)
+
+				for i := 0; i < len(*sequenceSignatures)-1; i++ {
+					verifier.On("VerifyBlockSignature", (*sequenceSignatures)[i], mock.Anything).Return(nil).Once()
+				}
+				verifier.On("VerifyBlockSignature", (*sequenceSignatures)[len(*sequenceSignatures)-1], mock.Anything).Return(errors.New("bad signature")).Once()
+			},
+			expectedError: "bad signature",
+			verifyFunc:    cluster.VerifyBlocksBFT,
+		},
 	} {
 		testCase := testCase
 		t.Run(testCase.name, func(t *testing.T) {
 			blockchain := createBlockChain(50, 100)
 			blockchain = testCase.mutateBlockSequence(blockchain)
 			verifier := &mocks.BlockVerifier{}
+			verifier.On("Id2Identity", mock.Anything).Return(nil)
 			if testCase.configureVerifier != nil {
 				testCase.configureVerifier(verifier)
 			}
-			err := cluster.VerifyBlocks(blockchain, verifier)
+			if testCase.verifyFunc == nil {
+				testCase.verifyFunc = cluster.VerifyBlocksCFT
+			}
+			err := testCase.verifyFunc(blockchain, verifier)
 			if testCase.expectedError != "" {
 				assert.EqualError(t, err, testCase.expectedError)
 			} else {
 				assert.NoError(t, err)
 			}
+			verifier.AssertNumberOfCalls(t, "VerifyBlockSignature", testCase.expectedVerificationCalls)
 		})
 	}
 }
@@ -976,6 +1026,7 @@ func TestVerificationRegistry(t *testing.T) {
 	defer flogging.Reset()
 
 	verifier := &mocks.BlockVerifier{}
+	verifier.On("Id2Identity", mock.Anything).Return(nil)
 
 	for _, testCase := range []struct {
 		description           string

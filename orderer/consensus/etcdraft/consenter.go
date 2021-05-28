@@ -30,7 +30,8 @@ import (
 	"go.etcd.io/etcd/raft"
 )
 
-//go:generate mockery -dir . -name InactiveChainRegistry -case underscore -output mocks
+// CreateChainCallback creates a new chain
+type CreateChainCallback func()
 
 // InactiveChainRegistry registers chains that are inactive
 type InactiveChainRegistry interface {
@@ -257,7 +258,7 @@ func New(
 	srvConf comm.ServerConfig,
 	srv *comm.GRPCServer,
 	r *multichannel.Registrar,
-	icr InactiveChainRegistry,
+	icr cluster.InactiveChainRegistry,
 	metricsProvider metrics.Provider,
 ) *Consenter {
 	logger := flogging.MustGetLogger("orderer.consensus.etcdraft")

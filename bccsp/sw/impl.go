@@ -36,6 +36,14 @@ var (
 type CSP struct {
 	ks bccsp.KeyStore
 
+	// default encryption and hash algorithm opts
+	keyGenOpts       bccsp.KeyGenOpts
+	pubKey           bccsp.Key
+	priKey           bccsp.Key
+	pubKeyImportOpts bccsp.KeyImportOpts
+	priKeyImportOpts bccsp.KeyImportOpts
+	hashOpts         bccsp.HashOpts
+
 	KeyGenerators map[reflect.Type]KeyGenerator
 	KeyDerivers   map[reflect.Type]KeyDeriver
 	KeyImporters  map[reflect.Type]KeyImporter
@@ -46,7 +54,7 @@ type CSP struct {
 	Hashers       map[reflect.Type]Hasher
 }
 
-func New(keyStore bccsp.KeyStore) (*CSP, error) {
+func New(algorithm string, keyStore bccsp.KeyStore) (*CSP, error) {
 	if keyStore == nil {
 		return nil, errors.Errorf("Invalid bccsp.KeyStore instance. It must be different from nil.")
 	}
@@ -60,9 +68,48 @@ func New(keyStore bccsp.KeyStore) (*CSP, error) {
 	keyDerivers := make(map[reflect.Type]KeyDeriver)
 	keyImporters := make(map[reflect.Type]KeyImporter)
 
-	csp := &CSP{keyStore,
-		keyGenerators, keyDerivers, keyImporters, encryptors,
-		decryptors, signers, verifiers, hashers}
+	csp := &CSP{ks: keyStore, KeyGenerators:
+	keyGenerators, KeyDerivers: keyDerivers, KeyImporters: keyImporters, Encryptors: encryptors,
+		Decryptors: decryptors, Signers: signers, Verifiers: verifiers, Hashers: hashers}
+
+	csp.hashOpts = &bccsp.SHAOpts{}
+	switch algorithm {
+	case bccsp.ECDSA:
+		csp.keyGenOpts = &bccsp.ECDSAKeyGenOpts{}
+		csp.priKey = &ecdsaPrivateKey{}
+		csp.pubKey = &ecdsaPublicKey{}
+		csp.priKeyImportOpts = &bccsp.ECDSAPrivateKeyImportOpts{}
+		csp.pubKeyImportOpts = &bccsp.ECDSAGoPublicKeyImportOpts{}
+	case bccsp.ECDSAP256:
+		csp.keyGenOpts = &bccsp.ECDSAP256KeyGenOpts{}
+		csp.priKey = &ecdsaPrivateKey{}
+		csp.pubKey = &ecdsaPublicKey{}
+		csp.priKeyImportOpts = &bccsp.ECDSAPrivateKeyImportOpts{}
+		csp.pubKeyImportOpts = &bccsp.ECDSAGoPublicKeyImportOpts{}
+	case bccsp.ECDSAP384:
+		csp.keyGenOpts = &bccsp.ECDSAP384KeyGenOpts{}
+		csp.priKey = &ecdsaPrivateKey{}
+		csp.pubKey = &ecdsaPublicKey{}
+		csp.priKeyImportOpts = &bccsp.ECDSAPrivateKeyImportOpts{}
+		csp.pubKeyImportOpts = &bccsp.ECDSAGoPublicKeyImportOpts{}
+	case bccsp.RSA:
+		csp.keyGenOpts = &bccsp.RSAKeyGenOpts{}
+		csp.priKey = &rsaPrivateKey{}
+		csp.pubKey = &rsaPublicKey{}
+		csp.pubKeyImportOpts = &bccsp.RSAGoPublicKeyImportOpts{}
+	case bccsp.GMSM2:
+		csp.keyGenOpts = &bccsp.GMSM2KeyGenOpts{}
+		csp.priKey = &gmsm2PrivateKey{}
+		csp.pubKey = &gmsm2PublicKey{}
+		csp.priKeyImportOpts = &bccsp.GMSM2PrivateKeyImportOpts{}
+		csp.pubKeyImportOpts = &bccsp.GMSM2PublicKeyImportOpts{}
+	case bccsp.GMSM4:
+		csp.keyGenOpts = &bccsp.GMSM4KeyGenOpts{}
+		csp.priKey = &gmsm4PrivateKey{}
+		csp.priKeyImportOpts = &bccsp.GMSM4ImportKeyOpts{}
+	default:
+		return nil, errors.Errorf("Algorithm not supported [%s]", algorithm)
+	}
 
 	return csp, nil
 }
@@ -72,6 +119,10 @@ func (csp *CSP) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) {
 	// Validate arguments
 	if opts == nil {
 		return nil, errors.New("Invalid Opts parameter. It must not be nil.")
+	}
+	ephemeral := opts.Ephemeral()
+	if opts.Algorithm() == "" {
+		opts = csp.keyGenOpts
 	}
 
 	keyGenerator, found := csp.KeyGenerators[reflect.TypeOf(opts)]
@@ -85,7 +136,7 @@ func (csp *CSP) KeyGen(opts bccsp.KeyGenOpts) (k bccsp.Key, err error) {
 	}
 
 	// If the key is not Ephemeral, store it.
-	if !opts.Ephemeral() {
+	if !ephemeral {
 		// Store the key
 		err = csp.ks.StoreKey(k)
 		if err != nil {
@@ -140,6 +191,13 @@ func (csp *CSP) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Ke
 		return nil, errors.New("Invalid opts. It must not be nil.")
 	}
 
+	ephemeral := opts.Ephemeral()
+	if opts.Algorithm() == "PublicKey" {
+		opts = csp.pubKeyImportOpts
+	} else if opts.Algorithm() == "PrivateKey" {
+		opts = csp.priKeyImportOpts
+	}
+
 	keyImporter, found := csp.KeyImporters[reflect.TypeOf(opts)]
 	if !found {
 		return nil, errors.Errorf("Unsupported 'KeyImportOpts' provided [%v]", opts)
@@ -151,7 +209,7 @@ func (csp *CSP) KeyImport(raw interface{}, opts bccsp.KeyImportOpts) (k bccsp.Ke
 	}
 
 	// If the key is not Ephemeral, store it.
-	if !opts.Ephemeral() {
+	if !ephemeral {
 		// Store the key
 		err = csp.ks.StoreKey(k)
 		if err != nil {
@@ -177,7 +235,11 @@ func (csp *CSP) GetKey(ski []byte) (k bccsp.Key, err error) {
 func (csp *CSP) Hash(msg []byte, opts bccsp.HashOpts) (digest []byte, err error) {
 	// Validate arguments
 	if opts == nil {
-		return nil, errors.New("Invalid opts. It must not be nil.")
+		if csp.hashOpts != nil {
+			opts = csp.hashOpts
+		} else {
+			return nil, errors.New("Invalid opts. It must not be nil.")
+		}
 	}
 
 	hasher, found := csp.Hashers[reflect.TypeOf(opts)]
@@ -198,7 +260,11 @@ func (csp *CSP) Hash(msg []byte, opts bccsp.HashOpts) (digest []byte, err error)
 func (csp *CSP) GetHash(opts bccsp.HashOpts) (h hash.Hash, err error) {
 	// Validate arguments
 	if opts == nil {
-		return nil, errors.New("Invalid opts. It must not be nil.")
+		if csp.hashOpts != nil {
+			opts = csp.hashOpts
+		} else {
+			return nil, errors.New("Invalid opts. It must not be nil.")
+		}
 	}
 
 	hasher, found := csp.Hashers[reflect.TypeOf(opts)]

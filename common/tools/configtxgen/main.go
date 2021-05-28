@@ -11,8 +11,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
+	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -213,7 +215,7 @@ func doPrintOrg(t *genesisconfig.TopLevel, printOrg string) error {
 }
 
 func main() {
-	var outputBlock, outputChannelCreateTx, channelCreateTxBaseProfile, profile, configPath, channelID, inspectBlock, inspectChannelCreateTx, outputAnchorPeersUpdate, asOrg, printOrg string
+	var outputBlock, outputChannelCreateTx, channelCreateTxBaseProfile, profile, configPath, channelID, inspectBlock, inspectChannelCreateTx, outputAnchorPeersUpdate, asOrg, printOrg, cryptoConf string
 
 	flag.StringVar(&outputBlock, "outputBlock", "", "The path to write the genesis block to (if set)")
 	flag.StringVar(&channelID, "channelID", "", "The channel ID to use in the configtx")
@@ -226,6 +228,7 @@ func main() {
 	flag.StringVar(&outputAnchorPeersUpdate, "outputAnchorPeersUpdate", "", "Creates an config update to update an anchor peer (works only with the default channel creation, and only for the first update)")
 	flag.StringVar(&asOrg, "asOrg", "", "Performs the config generation as a particular organization (by name), only including values in the write set that org (likely) has privilege to set")
 	flag.StringVar(&printOrg, "printOrg", "", "Prints the definition of an organization as JSON. (useful for adding an org to a channel manually)")
+	flag.StringVar(&cryptoConf, "crypto", "SW/ECDSA/SHA2-256", "The encrypt algorithm and hash type that used to gen ca certs")
 
 	version := flag.Bool("version", false, "Show version information")
 
@@ -262,7 +265,14 @@ func main() {
 	}()
 
 	logger.Info("Loading configuration")
-	factory.InitFactories(nil)
+	opts, err := parseCryptoConfig(cryptoConf)
+	if err != nil {
+		logger.Fatalf("Error parse crypto config: %s", err)
+	}
+	err = factory.InitFactories(opts)
+	if err != nil {
+		logger.Fatalf("Error init bccsp factory: %s", err)
+	}
 	var profileConfig *genesisconfig.Profile
 	if outputBlock != "" || outputChannelCreateTx != "" || outputAnchorPeersUpdate != "" {
 		if configPath != "" {
@@ -329,4 +339,39 @@ func main() {
 
 func printVersion() {
 	fmt.Println(metadata.GetVersionInfo())
+}
+
+func parseCryptoConfig(conf string) (*factory.FactoryOpts, error) {
+	groups := strings.Split(conf, "/")
+	if len(groups) != 3 {
+		return nil, errors.New("Invalid parameters for [--crypto]")
+	}
+	if groups[0] != "SW" {
+		return nil, errors.New("TODO implement")
+	}
+	hash := strings.Split(groups[2], "-")
+	if len(hash) != 2 {
+		return nil, errors.New("Invalid hash parameters for [--crypto]")
+	}
+	secLevel, err := strconv.Atoi(hash[1])
+	if err != nil {
+		return nil, errors.Errorf("SecLevel param type transfer failed: %cv", err)
+	}
+
+	opts := &factory.FactoryOpts{
+		ProviderName: groups[0],
+		SwOpts: &factory.SwOpts{
+			Algorithm:  groups[1],
+			HashFamily: hash[0],
+			SecLevel:   secLevel,
+			Ephemeral:  true,
+		},
+	}
+
+	hashOpts, err := bccsp.GetHashOptFromFamily(secLevel, hash[0])
+	if err != nil {
+		return nil, err
+	}
+	encoder.SetBccspConfig(opts, hashOpts.Algorithm())
+	return opts, nil
 }

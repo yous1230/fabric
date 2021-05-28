@@ -16,8 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger/fabric/common/util"
-
 	"github.com/hyperledger/fabric/bccsp/factory"
 	"github.com/hyperledger/fabric/common/channelconfig"
 	"github.com/hyperledger/fabric/common/flogging"
@@ -121,7 +119,7 @@ func InitConfig(cmdRoot string) error {
 }
 
 // InitCrypto initializes crypto for this peer
-func InitCrypto(mspMgrConfigDir, localMSPID, localMSPType, hashFamily, hashFunction string) error {
+func InitCrypto(mspMgrConfigDir, localMSPID, localMSPType string) error {
 	var err error
 	// Check whether msp folder exists
 	fi, err := os.Stat(mspMgrConfigDir)
@@ -134,16 +132,6 @@ func InitCrypto(mspMgrConfigDir, localMSPID, localMSPType, hashFamily, hashFunct
 		return errors.New("the local MSP must have an ID")
 	}
 
-	// Check whether hashFamily exists
-	if hashFamily == "" {
-		return errors.New("the hashFamily not exist")
-	}
-
-	// Check whether hashFunction exists
-	if hashFunction == "" {
-		return errors.New("the hashFunction not exist")
-	}
-
 	// Init the BCCSP
 	SetBCCSPKeystorePath()
 	var bccspConfig *factory.FactoryOpts
@@ -152,12 +140,11 @@ func InitCrypto(mspMgrConfigDir, localMSPID, localMSPType, hashFamily, hashFunct
 		return errors.WithMessage(err, "could not parse YAML config")
 	}
 
-	err = mspmgmt.LoadLocalMspWithType(mspMgrConfigDir, bccspConfig, localMSPID, localMSPType, hashFamily, hashFunction)
+	err = mspmgmt.LoadLocalMspWithType(mspMgrConfigDir, bccspConfig, localMSPID, localMSPType)
 	if err != nil {
 		return errors.WithMessage(err, fmt.Sprintf("error when setting up MSP of type %s from directory %s", localMSPType, mspMgrConfigDir))
 	}
 
-	util.InitDefaultHash(hashFunction)
 	return nil
 }
 
@@ -316,12 +303,10 @@ func InitCmd(cmd *cobra.Command, args []string) {
 	var mspMgrConfigDir = config.GetPath("peer.mspConfigPath")
 	var mspID = viper.GetString("peer.localMspId")
 	var mspType = viper.GetString("peer.localMspType")
-	var hashFamily = viper.GetString("peer.hash.hashFamily")
-	var hashFunction = viper.GetString("peer.hash.hashFunction")
 	if mspType == "" {
 		mspType = msp.ProviderTypeToString(msp.FABRIC)
 	}
-	err = InitCrypto(mspMgrConfigDir, mspID, mspType, hashFamily, hashFunction)
+	err = InitCrypto(mspMgrConfigDir, mspID, mspType)
 	if err != nil { // Handle errors reading the config file
 		mainLogger.Errorf("Cannot run peer because %s", err.Error())
 		os.Exit(1)
