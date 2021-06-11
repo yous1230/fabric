@@ -16,7 +16,7 @@ import (
 	protos "github.com/SmartBFT-Go/consensus/smartbftprotos"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	"runtime/debug"
+	//"runtime/debug"
 )
 
 // ViewController controls the view
@@ -254,7 +254,7 @@ func (v *ViewChanger) checkIfTimeout(now time.Time) {
 
 func (v *ViewChanger) processMsg(sender uint64, m *protos.Message) {
 	println("processMsg stack :", debug.Stack())
-	debug.PrintStack()
+	//debug.PrintStack()
 	// viewChange message
 	if vc := m.GetViewChange(); vc != nil {
 		v.Logger.Debugf("Node %d is processing a view change message %v from %d with next view %d", v.SelfID, m, sender, vc.NextView)
