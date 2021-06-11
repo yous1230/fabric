@@ -434,6 +434,7 @@ func (e *Endorser) preProcess(signedProp *pb.SignedProposal) (*validateResult, e
 
 // ProcessProposal process the Proposal
 func (e *Endorser) ProcessProposal(ctx context.Context, signedProp *pb.SignedProposal) (*pb.ProposalResponse, error) {
+	//debug.PrintStack()
 	// start time for computing elapsed time metric for successfully endorsed proposals
 	println("process proposal")
 	startTime := time.Now()

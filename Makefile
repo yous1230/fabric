@@ -1,7 +1,6 @@
 # Copyright IBM Corp All Rights Reserved.
 # Copyright London Stock Exchange Group All Rights Reserved.
 #
-#
 # SPDX-License-Identifier: Apache-2.0
 # -------------------------------------------------------------
 # This makefile defines the following targets

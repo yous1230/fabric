@@ -300,9 +300,10 @@ func processChaincodeExecutionResult(txid, ccName string, resp *pb.ChaincodeMess
 	println("resp is not nil -------")
 	switch resp.Type {
 	case pb.ChaincodeMessage_COMPLETED:
-		fmt.Printf("%s chaincode excute success ChaincodeMessage_COMPLETED", ccName)
+		//fmt.Printf("%s chaincode excute success ChaincodeMessage_COMPLETED", ccName)
 		println("chaincode excute success ChaincodeMessage_COMPLETED ", ccName)
 		res := &pb.Response{}
+		println("Response.Status = ", res.Status, ", Response.Message = ", res.Message, ", Response.Payload = ", res.Payload)
 		err := proto.Unmarshal(resp.Payload, res)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed to unmarshal response for transaction %s", txid)
@@ -313,7 +314,7 @@ func processChaincodeExecutionResult(txid, ccName string, resp *pb.ChaincodeMess
 		return res, resp.ChaincodeEvent, nil
 
 	case pb.ChaincodeMessage_ERROR:
-		fmt.Printf("%s chaincode excute failed ChaincodeMessage_ERROR", ccName)
+		//fmt.Printf("%s chaincode excute failed ChaincodeMessage_ERROR", ccName)
 		fmt.Printf("error: %s", resp.Payload)
 		println("%s chaincode excute failed ChaincodeMessage_ERROR ", ccName)
 		return nil, resp.ChaincodeEvent, errors.Errorf("transaction returned with failure: %s", resp.Payload)

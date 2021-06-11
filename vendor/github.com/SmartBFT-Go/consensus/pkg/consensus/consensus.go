@@ -433,6 +433,7 @@ func (c *Consensus) startComponents(view, seq, dec uint64, configSync bool) {
 	// If we delivered to the application proposal with sequence i,
 	// then we are expecting to be proposed a proposal with sequence i+1.
 	c.collector.Start()
+	println("startComponents view is: ",view)
 	c.viewChanger.Start(view)
 	if configSync {
 		c.controller.Start(view, seq+1, dec, c.Config.SyncOnStart)

@@ -16,6 +16,7 @@ import (
 	protos "github.com/SmartBFT-Go/consensus/smartbftprotos"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"runtime/debug"
 )
 
 // ViewController controls the view
@@ -120,6 +121,8 @@ func (v *ViewChanger) Start(startViewNumber uint64) {
 	v.setupVotes()
 
 	// set without locking
+	println("startViewNumber is:", startViewNumber)
+	println("v.currView is:", v.currView)
 	v.currView = startViewNumber
 	v.nextView = v.currView
 
@@ -250,6 +253,8 @@ func (v *ViewChanger) checkIfTimeout(now time.Time) {
 }
 
 func (v *ViewChanger) processMsg(sender uint64, m *protos.Message) {
+	println("processMsg stack :", debug.Stack())
+	debug.PrintStack()
 	// viewChange message
 	if vc := m.GetViewChange(); vc != nil {
 		v.Logger.Debugf("Node %d is processing a view change message %v from %d with next view %d", v.SelfID, m, sender, vc.NextView)
@@ -429,7 +434,7 @@ func (v *ViewChanger) getInFlight(lastDecision *protos.Proposal) *protos.Proposa
 		VerificationSequence: uint64(inFlight.VerificationSequence),
 	}
 	if lastDecision == nil {
-		v.Logger.Panicf("￿The given last decision is nil", v.SelfID)
+		v.Logger.Panicf("%d The given last decision is nil", v.SelfID)
 	}
 	if lastDecision.Metadata == nil {
 		return proposal // this is the first proposal after genesis
