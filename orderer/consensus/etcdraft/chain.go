@@ -532,6 +532,7 @@ func (c *Chain) Consensus(req *orderer.ConsensusRequest, sender uint64) error {
 // - the local serveRequest goroutine if this is leader
 // - the actual leader via the transport mechanism
 // The call fails if there's no leader elected yet.
+// Submit 将请求消息封装为 submit 结构通过当前 Chain实例的通道 c.submitC 传递给后端处理
 func (c *Chain) Submit(req *orderer.SubmitRequest, sender uint64) error {
 	if err := c.isRunning(); err != nil {
 		c.Metrics.ProposalFailures.Add(1)
@@ -548,6 +549,7 @@ func (c *Chain) Submit(req *orderer.SubmitRequest, sender uint64) error {
 		}
 
 		if lead != c.raftID {
+			// 如果当前不是leader，需要调用RPC接口将消息转发给leader节点
 			if err := c.rpc.SendSubmit(lead, req); err != nil {
 				c.Metrics.ProposalFailures.Add(1)
 				return err
@@ -663,6 +665,7 @@ func (c *Chain) serveRequest() {
 
 	for {
 		select {
+		// 判断当前是leader才会进行propose
 		case s := <-submitC:
 			if s == nil {
 				// polled by `WaitReady`

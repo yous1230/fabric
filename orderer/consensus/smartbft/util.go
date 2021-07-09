@@ -9,7 +9,6 @@ package smartbft
 import (
 	"bytes"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
@@ -351,13 +350,23 @@ func RemoteNodesFromConfigBlock(block *common.Block, selfID uint64, logger *flog
 		}
 
 		// Validate certificate structure
+		//for _, cert := range [][]byte{serverCertAsDER, clientCertAsDER} {
+		//	if _, err := x509.ParseCertificate(cert); err != nil {
+		//		_, err = gcx.GetX509SM2().ParseCertificate(cert)
+		//		if err != nil {
+		//			pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
+		//			logger.Errorf("Invalid certificate : %s", string(pemBytes))
+		//				return nil, err
+		//		}
+		//	}
+		//}
+
 		for _, cert := range [][]byte{serverCertAsDER, clientCertAsDER} {
-			if _, err := x509.ParseCertificate(cert); err != nil {
-				_, err = gcx.GetX509SM2().ParseCertificate(cert)
+			if _, err := gcx.GetX509().ParseCertificate(cert); err != nil {
 				if err != nil {
 					pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
 					logger.Errorf("Invalid certificate : %s", string(pemBytes))
-						return nil, err
+					return nil, err
 				}
 			}
 		}

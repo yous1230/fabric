@@ -58,7 +58,7 @@ func (s *Signer) SignProposal(proposal types.Proposal, auxiliaryInput []byte) *t
 		}),
 	}
 
-	signature := utils.SignOrPanic(s.SignerSerializer, sig.AsBytes())
+	signature := utils.SignOrPanicc(s.SignerSerializer, sig.AsBytes())
 
 	// Nil out the signature header after creating the signature
 	sig.SignatureHeader = nil

@@ -52,8 +52,11 @@ func (ri *replicationInitiator) replicateIfNeeded(bootstrapBlock *common.Block) 
 func (ri *replicationInitiator) createReplicator(bootstrapBlock *common.Block, filter func(string) bool) *cluster.Replicator {
 	membershipPred := etcdraft.ConsenterCertificate(ri.secOpts.Certificate).IsConsenterOfChannel
 	if consensusType(bootstrapBlock) == "smartbft" {
+		println("consensusType(bootstrapBlock) == smartbft")
 		membershipPred = smartbft.ConsenterCertificate(ri.secOpts.Certificate).IsConsenterOfChannel
 	}
+	println("consensusType(bootstrapBlock) == etcdraft")
+
 	systemChannelName, err := utils.GetChainIDFromBlock(bootstrapBlock)
 	if err != nil {
 		ri.logger.Panicf("Failed extracting system channel name from bootstrap block: %v", err)

@@ -72,6 +72,7 @@ func (d *DeliverClient) readBlock() (*cb.Block, error) {
 	switch t := msg.Type.(type) {
 	case *ab.DeliverResponse_Status:
 		logger.Infof("Got status: %v", t)
+		logger.Infof("Got status str: %s", string(t.Status))
 		return nil, errors.Errorf("can't read the block: %v", t)
 	case *ab.DeliverResponse_Block:
 		logger.Infof("Received block: %v", t.Block.Header.Number)
@@ -89,7 +90,7 @@ func (d *DeliverClient) GetSpecifiedBlock(num uint64) (*cb.Block, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "error getting specified block")
 	}
-
+	logger.Infof("Got GetSpecifiedBlock")
 	return d.readBlock()
 }
 
@@ -99,7 +100,7 @@ func (d *DeliverClient) GetOldestBlock() (*cb.Block, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "error getting oldest block")
 	}
-
+	logger.Infof("Got GetOldestBlock")
 	return d.readBlock()
 }
 
@@ -109,7 +110,7 @@ func (d *DeliverClient) GetNewestBlock() (*cb.Block, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "error getting newest block")
 	}
-
+	logger.Infof("Got GetNewestBlock")
 	return d.readBlock()
 }
 

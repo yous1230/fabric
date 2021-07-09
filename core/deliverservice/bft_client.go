@@ -92,6 +92,7 @@ func NewBFTDeliveryClient(
 	ledgerInfoProvider blocksprovider.LedgerInfo,
 	msgVerifier MessageCryptoVerifier,
 ) *bftDeliveryClient {
+	println("实例化bftClient")
 	c := &bftDeliveryClient{
 		stopChan:                            make(chan struct{}, 1),
 		chainID:                             chainID,
@@ -114,6 +115,7 @@ func NewBFTDeliveryClient(
 }
 
 func (c *bftDeliveryClient) Recv() (response *orderer.DeliverResponse, err error) {
+	println("Enter bftDeliveryClient Recv")
 	bftLogger.Debugf("[%s] Entry", c.chainID)
 
 	c.startOnce.Do(func() {

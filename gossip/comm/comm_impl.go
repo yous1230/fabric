@@ -556,6 +556,7 @@ func (c *commImpl) GossipStream(stream proto.Gossip_GossipStreamServer) error {
 	if c.isStopping() {
 		return fmt.Errorf("Shutting down")
 	}
+	//connInfo, _ := c.authenticateRemotePeer(stream, false)
 	connInfo, err := c.authenticateRemotePeer(stream, false)
 	if err != nil {
 		c.logger.Errorf("Authentication failed: %v", err)

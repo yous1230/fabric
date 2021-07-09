@@ -136,8 +136,10 @@ func NewGRPCServerFromListener(listener net.Listener, serverConfig ServerConfig)
 			// create credentials and add to server options
 			var creds credentials.TransportCredentials
 			if factory.GetDefaultAlgorithm() == bccsp.GMSM2 {
+				println("factory.GetDefaultAlgorithm() == bccsp.GMSM2")
 				creds = NewTLS(grpcServer.tls.config, serverConfig.Logger)
 			} else {
+				println("factory.GetDefaultAlgorithm() != bccsp.GMSM2")
 				creds = NewServerTransportCredentials(grpcServer.tls, serverConfig.Logger)
 			}
 			serverOpts = append(serverOpts, grpc.Creds(creds))
@@ -228,6 +230,8 @@ func (gServer *GRPCServer) Start() error {
 func (gServer *GRPCServer) Stop() {
 	gServer.server.Stop()
 }
+
+
 
 // internal function to add a PEM-encoded clientRootCA
 func (gServer *GRPCServer) appendClientRootCA(clientRoot []byte) error {

@@ -253,7 +253,7 @@ func (v *ViewChanger) checkIfTimeout(now time.Time) {
 }
 
 func (v *ViewChanger) processMsg(sender uint64, m *protos.Message) {
-	println("processMsg stack :", debug.Stack())
+	//println("processMsg stack :", debug.Stack())
 	//debug.PrintStack()
 	// viewChange message
 	if vc := m.GetViewChange(); vc != nil {

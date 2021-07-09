@@ -1,10 +1,11 @@
 # Copyright IBM Corp All Rights Reserved.
 # Copyright London Stock Exchange Group All Rights Reserved.
 #
+#
 # SPDX-License-Identifier: Apache-2.0
+#
 # -------------------------------------------------------------
 # This makefile defines the following targets
-#
 #   - all (default) - builds all targets and runs all non-integration tests/checks
 #   - checks - runs all non-integration tests/checks
 #   - desk-check - runs linters and verify to test changed packages
@@ -46,7 +47,7 @@
 BASE_VERSION = 1.4.7
 PREV_VERSION = 1.4.6
 CHAINTOOL_RELEASE=1.1.3
-BASEIMAGE_RELEASE=0.4.20
+BASEIMAGE_RELEASE=0.4.22
 
 #
 # Allow to build as a submodule setting the main project to

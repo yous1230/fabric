@@ -176,10 +176,10 @@ func (hr *bftHeaderReceiver) LastBlockNum() (uint64, time.Time, error) {
 		if err != nil {
 			hr.lastHeaderOK = false
 			bftLogger.Warningf("[%s][%s] Last block verification failed: %s", hr.chainID, hr.endpoint, err)
-			return hr.lastHeader.Header.Number, hr.lastHeaderTime, errors.Wrapf(err, "Last block verification failed")
+			//return hr.lastHeader.Header.Number, hr.lastHeaderTime, errors.Wrapf(err, "Last block verification failed")
 		}
 	}
-
+	bftLogger.Warningf("get last block : %s", hr.lastHeader.Header.Number)
 	if !hr.lastHeaderOK {
 		bftLogger.Debugf("[%s][%s] Last block verification failed on previous invocation, cached result", hr.chainID, hr.endpoint)
 		return hr.lastHeader.Header.Number, hr.lastHeaderTime, errors.New("Last block verification failed")

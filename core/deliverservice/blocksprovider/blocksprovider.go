@@ -113,6 +113,7 @@ func NewBlocksProvider(chainID string, client StreamClient, gossip GossipService
 // DeliverBlocks used to pull out blocks from the ordering service to
 // distributed them across peers
 func (b *blocksProviderImpl) DeliverBlocks() {
+	println("获取区块 DeliverBlocks()")
 	errorStatusCounter := 0
 	var statusCounter uint64 = 0
 	var verErrCounter uint64 = 0
@@ -120,6 +121,8 @@ func (b *blocksProviderImpl) DeliverBlocks() {
 
 	defer b.client.Close()
 	for !b.isDone() {
+		// 接收orderer分发的区块
+		println("接收orderer分发的区块")
 		msg, err := b.client.Recv()
 		if err != nil {
 			logger.Warningf("[%s] Receive error: %s", b.chainID, err.Error())
@@ -188,6 +191,7 @@ func (b *blocksProviderImpl) DeliverBlocks() {
 			// Gossip messages with other nodes
 			logger.Debugf("[%s] Gossiping block [%d], peers number [%d]", b.chainID, blockNum, numberOfPeers)
 			if !b.isDone() {
+				// peer节点间通过gossip同步区块
 				b.gossip.Gossip(gossipMsg)
 			}
 

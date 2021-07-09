@@ -120,5 +120,6 @@ func (b *blocksRequester) seekLatestFromCommitter(height uint64, contentType ord
 	if err != nil {
 		return err
 	}
+	// 发送envelope给orderer获取区块
 	return b.client.Send(env)
 }

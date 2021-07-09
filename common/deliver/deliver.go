@@ -149,6 +149,7 @@ func NewHandler(cm ChainManager, timeWindow time.Duration, mutualTLS bool, metri
 }
 
 // Handle receives incoming deliver requests.
+// 当deliver服务被调用时，转到Handle()方法处理
 func (h *Handler) Handle(ctx context.Context, srv *Server) error {
 	addr := util.ExtractRemoteAddress(ctx)
 	logger.Debugf("Starting new deliver loop for %s", addr)
@@ -156,6 +157,7 @@ func (h *Handler) Handle(ctx context.Context, srv *Server) error {
 	defer h.Metrics.StreamsClosed.Add(1)
 	for {
 		logger.Debugf("Attempting to read seek info message from %s", addr)
+		// 接受发来envelope
 		envelope, err := srv.Recv()
 		if err == io.EOF {
 			logger.Debugf("Received EOF from %s, hangup", addr)
@@ -165,7 +167,7 @@ func (h *Handler) Handle(ctx context.Context, srv *Server) error {
 			logger.Warningf("Error reading from %s: %s", addr, err)
 			return err
 		}
-
+		// 分发区块，根据envelope信息分发block
 		status, err := h.deliverBlocks(ctx, srv, envelope)
 		if err != nil {
 			return err
@@ -339,6 +341,7 @@ func (h *Handler) deliverBlocks(ctx context.Context, srv *Server, envelope *cb.E
 
 		logger.Debugf("[channel: %s] Delivering block [%d] for (%p) for %s", chdr.ChannelId, block.Header.Number, seekInfo, addr)
 
+		// -------bft
 		if seekInfo.ContentType == ab.SeekInfo_HEADER_WITH_SIG {
 			block.Data = nil
 		}

@@ -8,7 +8,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
@@ -25,6 +24,7 @@ import (
 )
 
 func SanitizeIdentity(identity []byte) ([]byte, error) {
+
 	sID := &msp.SerializedIdentity{}
 	if err := proto.Unmarshal(identity, sID); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshaling identity %s", string(identity))
@@ -34,14 +34,17 @@ func SanitizeIdentity(identity []byte) ([]byte, error) {
 	if der == nil {
 		return nil, errors.Errorf("failed to PEM decode identity bytes: %s", string(sID.IdBytes))
 	}
-	cert, err := x509.ParseCertificate(der.Bytes)
+	cert, err := gcx.GetX509().ParseCertificate(der.Bytes)
 	if err != nil {
-		//gcx.InitX509("SM2")
-		if cert, err = gcx.GetX509SM2().ParseCertificate(der.Bytes); err != nil {
-			return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
-		}
-		//return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
+		return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
 	}
+	//if err != nil {
+	//	//gcx.InitX509("SM2")
+	//	if cert, err = gcx.GetX509SM2().ParseCertificate(der.Bytes); err != nil {
+	//		return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
+	//	}
+	//	//return nil, errors.Wrapf(err, "failed parsing certificate %s", string(sID.IdBytes))
+	//}
 
 	algs := cert.SignatureAlgorithm.String()
 	//fmt.Printf("algs is %s", algs)

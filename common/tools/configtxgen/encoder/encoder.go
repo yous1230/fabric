@@ -481,6 +481,7 @@ func NewChannelCreateConfigUpdate(channelID string, conf *genesisconfig.Profile,
 		}),
 	}
 	if hashingAlgorithm != bccsp.SHA256 {
+		println("hashingAlgorithm ==== ", hashingAlgorithm)
 		updt.ReadSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{Version: 0}
 		updt.WriteSet.Values[channelconfig.HashingAlgorithmKey] = &cb.ConfigValue{
 			Version: 0,

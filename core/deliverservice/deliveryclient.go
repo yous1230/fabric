@@ -251,24 +251,30 @@ func (d *deliverServiceImpl) StartDeliverForChannel(chainID string, ledgerInfo b
 	} else {
 		logger.Info("This peer will retrieve blocks from ordering service and disseminate to other peers in the organization for channel", chainID)
 		if !isBFTClientEnabled() {
+			println("!!!isBFTClientEnabled()")
 			client := d.newClient(chainID, ledgerInfo)
+			// 创建区块deliver实例
 			d.deliverClients[chainID] = &deliverClient{
 				bp:      blocksprovider.NewBlocksProvider(chainID, client, d.conf.Gossip, d.conf.CryptoSvc),
 				bclient: client,
 			}
 		} else {
+			fmt.Sprintf("isBFTClientEnabled()")
+			println("isBFTClientEnabled()()")
 			bftClient := d.newBFTClient(chainID, ledgerInfo, d.conf.CryptoSvc)
 			d.deliverClients[chainID] = &deliverClient{
 				bp:      blocksprovider.NewBlocksProvider(chainID, bftClient, d.conf.Gossip, d.conf.CryptoSvc),
 				bclient: bftClient,
 			}
 		}
+		// 执行
 		go d.launchBlockProvider(chainID, finalizer)
 	}
 	return nil
 }
 
 func (d *deliverServiceImpl) launchBlockProvider(chainID string, finalizer func()) {
+	println("launchBlockProvider()")
 	d.lock.RLock()
 	dc := d.deliverClients[chainID]
 	d.lock.RUnlock()

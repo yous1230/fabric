@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	gcx "github.com/zhigui-projects/gm-crypto/x509"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
@@ -29,7 +30,7 @@ func TestSanitizeIdentity(t *testing.T) {
 	extractCertFromPEM := func(cert []byte) *x509.Certificate {
 		bl, _ := pem.Decode(cert)
 
-		certificate, err := x509.ParseCertificate(bl.Bytes)
+		certificate, err := gcx.GetX509().ParseCertificate(bl.Bytes)
 		assert.NoError(t, err)
 
 		return certificate
@@ -54,10 +55,12 @@ func TestSanitizeIdentity(t *testing.T) {
 	})
 
 	t.Run("highS changes, but is still verifiable under the CA", func(t *testing.T) {
-		cert, err := base64.StdEncoding.DecodeString(highSCert)
+		//cert, err := base64.StdEncoding.DecodeString(highSCert)
+		cert, err := base64.StdEncoding.DecodeString(gm)
 		assert.NoError(t, err)
 
-		caCert, err := base64.StdEncoding.DecodeString(highSCACert)
+		//caCert, err := base64.StdEncoding.DecodeString(highSCACert)
+		caCert, err := base64.StdEncoding.DecodeString(gm)
 		assert.NoError(t, err)
 
 		identity := &msp.SerializedIdentity{

@@ -469,6 +469,7 @@ func (c *BFTChain) Configure(config *common.Envelope, configSeq uint64) error {
 }
 
 func (c *BFTChain) submit(env *common.Envelope, configSeq uint64) error {
+	//debug.PrintStack()
 	reqBytes, err := proto.Marshal(env)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal request envelope")

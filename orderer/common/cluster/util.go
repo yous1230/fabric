@@ -356,6 +356,7 @@ func SignatureSetFromBlock(block *common.Block, id2identities map[uint64][]byte)
 	for _, metadataSignature := range metadata.Signatures {
 		identity := id2identities[metadataSignature.SignerId]
 		if len(metadataSignature.SignatureHeader) > 0 {
+			println("len(metadataSignature.SignatureHeader) > 0")
 			sigHdr, err := utils.GetSignatureHeader(metadataSignature.SignatureHeader)
 			if err != nil {
 				return nil, errors.Errorf("failed unmarshaling signature header for block with id %d: %v",
@@ -363,6 +364,7 @@ func SignatureSetFromBlock(block *common.Block, id2identities map[uint64][]byte)
 			}
 			identity = sigHdr.Creator
 		} else {
+			println("len(metadataSignature.SignatureHeader) <= 0")
 			metadataSignature.SignatureHeader = utils.MarshalOrPanic(&common.SignatureHeader{
 				Creator: identity,
 				Nonce:   metadataSignature.Nonce,
